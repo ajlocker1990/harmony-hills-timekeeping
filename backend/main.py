@@ -6,35 +6,12 @@ from zoneinfo import ZoneInfo
 
 import psycopg
 from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
 
 # ============================================================
 # HARMONY HILLS TIMEKEEPING
-# Backend API
-#
-# Features:
-# - SL group-based department identification
-# - Clock registration
-# - Employee creation
-# - Department membership
-# - Clock In
-# - Clock Out
-# - Shift activity reports
-# - Admin shift viewing
-# - Weekly department totals
-# - Shift corrections
-# - Manually added shifts
-# - Voided shifts
-# - Permanent audit trail
-#
-# Discord integration intentionally omitted for now.
-# ============================================================
-
-
-# ============================================================
-# ENVIRONMENT CONFIGURATION
 # ============================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -46,18 +23,15 @@ SYSTEM_TIMEZONE = os.getenv(
     "America/New_York",
 )
 
-
 if not DATABASE_URL:
     raise RuntimeError(
         "DATABASE_URL environment variable is not configured."
     )
 
-
 if not CLOCK_API_KEY:
     raise RuntimeError(
         "CLOCK_API_KEY environment variable is not configured."
     )
-
 
 if not ADMIN_API_KEY:
     raise RuntimeError(
@@ -66,13 +40,13 @@ if not ADMIN_API_KEY:
 
 
 # ============================================================
-# APPLICATION
+# FASTAPI
 # ============================================================
 
 app = FastAPI(
     title="Harmony Hills Timekeeping",
     description="Harmony Hills personnel timekeeping system.",
-    version="0.2.0",
+    version="0.2.1",
 )
 
 
@@ -80,19 +54,14 @@ app = FastAPI(
 # REQUEST MODELS
 # ============================================================
 
-
 class ClockInRequest(BaseModel):
     avatar_uuid: UUID
-
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
     )
-
     group_uuid: UUID
-
     clock_uuid: UUID
-
     clock_name: Optional[str] = Field(
         default=None,
         max_length=200,
@@ -101,21 +70,16 @@ class ClockInRequest(BaseModel):
 
 class ClockOutRequest(BaseModel):
     avatar_uuid: UUID
-
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
     )
-
     group_uuid: UUID
-
     clock_uuid: UUID
-
     clock_name: Optional[str] = Field(
         default=None,
         max_length=200,
     )
-
     activities: str = Field(
         min_length=1,
         max_length=1500,
@@ -124,19 +88,15 @@ class ClockOutRequest(BaseModel):
 
 class AdminShiftEditRequest(BaseModel):
     clock_in: Optional[datetime] = None
-
     clock_out: Optional[datetime] = None
-
     activities: Optional[str] = Field(
         default=None,
         max_length=1500,
     )
-
     reason: str = Field(
         min_length=1,
         max_length=500,
     )
-
     changed_by: str = Field(
         min_length=1,
         max_length=200,
@@ -145,31 +105,24 @@ class AdminShiftEditRequest(BaseModel):
 
 class AdminShiftAddRequest(BaseModel):
     avatar_uuid: UUID
-
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
     )
-
     department_code: str = Field(
         min_length=1,
         max_length=20,
     )
-
     clock_in: datetime
-
     clock_out: datetime
-
     activities: Optional[str] = Field(
         default=None,
         max_length=1500,
     )
-
     reason: str = Field(
         min_length=1,
         max_length=500,
     )
-
     changed_by: str = Field(
         min_length=1,
         max_length=200,
@@ -181,7 +134,6 @@ class AdminShiftVoidRequest(BaseModel):
         min_length=1,
         max_length=500,
     )
-
     changed_by: str = Field(
         min_length=1,
         max_length=200,
@@ -192,7 +144,6 @@ class AdminShiftVoidRequest(BaseModel):
 # DATABASE
 # ============================================================
 
-
 def get_connection():
     return psycopg.connect(
         DATABASE_URL,
@@ -201,9 +152,8 @@ def get_connection():
 
 
 # ============================================================
-# CLOCK AUTHENTICATION
+# AUTHENTICATION
 # ============================================================
-
 
 def verify_clock_api_key(
     api_key: Optional[str],
@@ -219,11 +169,6 @@ def verify_clock_api_key(
             status_code=403,
             detail="Invalid clock API key.",
         )
-
-
-# ============================================================
-# ADMIN AUTHENTICATION
-# ============================================================
 
 
 def verify_admin_api_key(
@@ -243,19 +188,12 @@ def verify_admin_api_key(
 
 
 # ============================================================
-# TIME HELPERS
+# HELPERS
 # ============================================================
-
 
 def ensure_timezone(
     value: datetime,
 ) -> datetime:
-    """
-    If an admin submits a datetime without timezone information,
-    interpret it as Harmony Hills local time.
-
-    If a timezone is already supplied, preserve it.
-    """
 
     if value.tzinfo is not None:
         return value
@@ -272,8 +210,10 @@ def ensure_timezone(
 def format_duration(
     seconds: int,
 ):
-    if seconds < 0:
-        seconds = 0
+    seconds = max(
+        0,
+        int(seconds),
+    )
 
     hours = seconds // 3600
 
@@ -290,9 +230,8 @@ def format_duration(
 
 
 # ============================================================
-# DEPARTMENT LOOKUP BY SL GROUP
+# DEPARTMENT HELPERS
 # ============================================================
-
 
 def get_department_by_group(
     cur,
@@ -314,9 +253,9 @@ def get_department_by_group(
         ),
     )
 
-    department = cur.fetchone()
+    row = cur.fetchone()
 
-    if not department:
+    if not row:
         raise HTTPException(
             status_code=403,
             detail=(
@@ -325,24 +264,17 @@ def get_department_by_group(
             ),
         )
 
-    if not department[3]:
+    if not row[3]:
         raise HTTPException(
             status_code=403,
-            detail=(
-                "This department is currently inactive."
-            ),
+            detail="This department is inactive.",
         )
 
     return {
-        "id": department[0],
-        "code": department[1],
-        "name": department[2],
+        "id": row[0],
+        "code": row[1],
+        "name": row[2],
     }
-
-
-# ============================================================
-# DEPARTMENT LOOKUP BY CODE
-# ============================================================
 
 
 def get_department_by_code(
@@ -365,24 +297,24 @@ def get_department_by_code(
         ),
     )
 
-    department = cur.fetchone()
+    row = cur.fetchone()
 
-    if not department:
+    if not row:
         raise HTTPException(
             status_code=404,
             detail="Department not found.",
         )
 
-    if not department[3]:
+    if not row[3]:
         raise HTTPException(
             status_code=403,
             detail="Department is inactive.",
         )
 
     return {
-        "id": department[0],
-        "code": department[1],
-        "name": department[2],
+        "id": row[0],
+        "code": row[1],
+        "name": row[2],
     }
 
 
@@ -390,22 +322,12 @@ def get_department_by_code(
 # CLOCK REGISTRATION
 # ============================================================
 
-
 def validate_or_register_clock(
     cur,
     clock_uuid: UUID,
     clock_name: Optional[str],
     department_id,
 ):
-    """
-    First contact from a clock:
-        Automatically registers the clock.
-
-    Future requests:
-        Makes sure the clock remains active and belongs
-        to the same department.
-    """
-
     cur.execute(
         """
         select
@@ -421,12 +343,12 @@ def validate_or_register_clock(
         ),
     )
 
-    existing = cur.fetchone()
+    row = cur.fetchone()
 
-    if existing:
-        clock_id = existing[0]
-        registered_department = existing[1]
-        active = existing[2]
+    if row:
+        clock_id = row[0]
+        registered_department = row[1]
+        active = row[2]
 
         if not active:
             raise HTTPException(
@@ -491,9 +413,8 @@ def validate_or_register_clock(
 
 
 # ============================================================
-# EMPLOYEE LOOKUP / CREATION
+# EMPLOYEES
 # ============================================================
-
 
 def get_or_create_employee(
     cur,
@@ -514,18 +435,16 @@ def get_or_create_employee(
         ),
     )
 
-    employee = cur.fetchone()
+    row = cur.fetchone()
 
-    if employee:
-        employee_id = employee[0]
-        active = employee[1]
+    if row:
+        employee_id = row[0]
+        active = row[1]
 
         if not active:
             raise HTTPException(
                 status_code=403,
-                detail=(
-                    "This employee has been disabled."
-                ),
+                detail="This employee is inactive.",
             )
 
         cur.execute(
@@ -566,9 +485,8 @@ def get_or_create_employee(
 
 
 # ============================================================
-# DEPARTMENT MEMBERSHIP
+# MEMBERSHIP
 # ============================================================
-
 
 def ensure_membership(
     cur,
@@ -591,10 +509,10 @@ def ensure_membership(
         ),
     )
 
-    membership = cur.fetchone()
+    row = cur.fetchone()
 
-    if membership:
-        if not membership[1]:
+    if row:
+        if not row[1]:
             raise HTTPException(
                 status_code=403,
                 detail=(
@@ -603,7 +521,7 @@ def ensure_membership(
                 ),
             )
 
-        return membership[0]
+        return row[0]
 
     cur.execute(
         """
@@ -629,9 +547,8 @@ def ensure_membership(
 
 
 # ============================================================
-# HEALTH CHECK
+# HEALTH
 # ============================================================
-
 
 @app.get("/health")
 def health():
@@ -641,13 +558,12 @@ def health():
                 cur.execute(
                     "select 1;"
                 )
-
                 cur.fetchone()
 
         return {
             "status": "ok",
             "service": "Harmony Hills Timekeeping",
-            "version": "0.2.0",
+            "version": "0.2.1",
         }
 
     except Exception as exc:
@@ -662,7 +578,6 @@ def health():
 # ============================================================
 # CLOCK IN
 # ============================================================
-
 
 @app.post(
     "/api/timekeeping/clock-in"
@@ -709,10 +624,6 @@ def clock_in(
                     department["id"],
                 )
 
-                # --------------------------------------------
-                # Check for existing open shift
-                # --------------------------------------------
-
                 cur.execute(
                     """
                     select
@@ -731,25 +642,14 @@ def clock_in(
                     ),
                 )
 
-                existing_shift = (
-                    cur.fetchone()
-                )
+                existing = cur.fetchone()
 
-                if existing_shift:
+                if existing:
                     raise HTTPException(
                         status_code=409,
-                        detail={
-                            "message": (
-                                "You are already clocked in."
-                            ),
-                            "shift_id": str(
-                                existing_shift[0]
-                            ),
-                            "clock_in": (
-                                existing_shift[1]
-                                .isoformat()
-                            ),
-                        },
+                        detail=(
+                            "You are already clocked in."
+                        ),
                     )
 
                 clock_in_time = (
@@ -796,12 +696,8 @@ def clock_in(
                         shift_id
                     ),
                     "department": {
-                        "code": (
-                            department["code"]
-                        ),
-                        "name": (
-                            department["name"]
-                        ),
+                        "code": department["code"],
+                        "name": department["name"],
                     },
                     "employee": {
                         "avatar_uuid": str(
@@ -831,7 +727,6 @@ def clock_in(
 # ============================================================
 # CLOCK OUT
 # ============================================================
-
 
 @app.post(
     "/api/timekeeping/clock-out"
@@ -878,10 +773,6 @@ def clock_out(
                     department["id"],
                 )
 
-                # --------------------------------------------
-                # Find open shift
-                # --------------------------------------------
-
                 cur.execute(
                     """
                     select
@@ -907,8 +798,7 @@ def clock_out(
                         status_code=409,
                         detail=(
                             "No open shift was found "
-                            "for this employee in this "
-                            "department."
+                            "for this employee."
                         ),
                     )
 
@@ -958,12 +848,6 @@ def clock_out(
                     ).total_seconds()
                 )
 
-                duration = (
-                    format_duration(
-                        total_seconds
-                    )
-                )
-
                 return {
                     "success": True,
                     "action": "CLOCK_OUT",
@@ -971,12 +855,8 @@ def clock_out(
                         shift_id
                     ),
                     "department": {
-                        "code": (
-                            department["code"]
-                        ),
-                        "name": (
-                            department["name"]
-                        ),
+                        "code": department["code"],
+                        "name": department["name"],
                     },
                     "employee": {
                         "avatar_uuid": str(
@@ -992,7 +872,11 @@ def clock_out(
                     "clock_out": (
                         clock_out_time.isoformat()
                     ),
-                    "duration": duration,
+                    "duration": (
+                        format_duration(
+                            total_seconds
+                        )
+                    ),
                     "activities": activities,
                 }
 
@@ -1009,10 +893,8 @@ def clock_out(
 
 
 # ============================================================
-# ADMIN
-# LIST SHIFTS
+# ADMIN - LIST SHIFTS
 # ============================================================
-
 
 @app.get(
     "/api/timekeeping/admin/shifts"
@@ -1028,11 +910,10 @@ def admin_list_shifts(
         x_admin_key
     )
 
-    if limit < 1:
-        limit = 1
-
-    if limit > 500:
-        limit = 500
+    limit = max(
+        1,
+        min(limit, 500),
+    )
 
     try:
         with get_connection() as conn:
@@ -1074,15 +955,13 @@ def admin_list_shifts(
                 shifts = []
 
                 for row in rows:
-
-                    total_seconds = None
                     duration = None
 
                     if (
                         row[3]
                         and row[4]
                     ):
-                        total_seconds = int(
+                        seconds = int(
                             (
                                 row[4]
                                 - row[3]
@@ -1091,7 +970,7 @@ def admin_list_shifts(
 
                         duration = (
                             format_duration(
-                                total_seconds
+                                seconds
                             )
                         )
 
@@ -1107,34 +986,22 @@ def admin_list_shifts(
                                 row[2]
                             ),
                             "clock_in": (
-                                row[3]
-                                .isoformat()
+                                row[3].isoformat()
                             ),
                             "clock_out": (
-                                row[4]
-                                .isoformat()
+                                row[4].isoformat()
                                 if row[4]
                                 else None
                             ),
-                            "duration": (
-                                duration
-                            ),
-                            "activities": (
-                                row[5]
-                            ),
-                            "status": (
-                                row[6]
-                            ),
-                            "source": (
-                                row[7]
-                            ),
+                            "duration": duration,
+                            "activities": row[5],
+                            "status": row[6],
+                            "source": row[7],
                         }
                     )
 
                 return {
-                    "department": (
-                        department
-                    ),
+                    "department": department,
                     "count": len(
                         shifts
                     ),
@@ -1154,10 +1021,8 @@ def admin_list_shifts(
 
 
 # ============================================================
-# ADMIN
-# CURRENTLY CLOCKED IN
+# ADMIN - OPEN SHIFTS
 # ============================================================
-
 
 @app.get(
     "/api/timekeeping/admin/open-shifts"
@@ -1211,7 +1076,6 @@ def admin_open_shifts(
                 shifts = []
 
                 for row in rows:
-
                     seconds = int(
                         (
                             now
@@ -1231,8 +1095,7 @@ def admin_open_shifts(
                                 row[2]
                             ),
                             "clock_in": (
-                                row[3]
-                                .isoformat()
+                                row[3].isoformat()
                             ),
                             "duration": (
                                 format_duration(
@@ -1243,9 +1106,7 @@ def admin_open_shifts(
                     )
 
                 return {
-                    "department": (
-                        department
-                    ),
+                    "department": department,
                     "count": len(
                         shifts
                     ),
@@ -1259,17 +1120,14 @@ def admin_open_shifts(
         raise HTTPException(
             status_code=500,
             detail=(
-                "Unable to load open shifts: "
-                f"{exc}"
+                f"Unable to load open shifts: {exc}"
             ),
         )
 
 
 # ============================================================
-# ADMIN
-# WEEKLY HOURS
+# ADMIN - WEEKLY HOURS
 # ============================================================
-
 
 @app.get(
     "/api/timekeeping/admin/weekly-hours"
@@ -1312,19 +1170,14 @@ def admin_weekly_hours(
             )
         )
 
-        # Convert local payroll boundaries to UTC
-        # for database comparison.
-
         start_utc = (
-            start_local
-            .astimezone(
+            start_local.astimezone(
                 timezone.utc
             )
         )
 
         end_utc = (
-            end_local
-            .astimezone(
+            end_local.astimezone(
                 timezone.utc
             )
         )
@@ -1354,7 +1207,7 @@ def admin_weekly_hours(
                                 )
                             ),
                             0
-                        ) as total_seconds
+                        )
                     from public.timekeeping_shifts s
                     join public.timekeeping_employees e
                         on e.id = s.employee_id
@@ -1365,8 +1218,7 @@ def admin_weekly_hours(
                     group by
                         e.avatar_uuid,
                         e.avatar_name
-                    order by
-                        total_seconds desc
+                    order by 3 desc
                     """,
                     (
                         department["id"],
@@ -1381,13 +1233,12 @@ def admin_weekly_hours(
                 department_total = 0
 
                 for row in rows:
-
-                    total_seconds = int(
+                    seconds = int(
                         row[2] or 0
                     )
 
                     department_total += (
-                        total_seconds
+                        seconds
                     )
 
                     employees.append(
@@ -1400,30 +1251,24 @@ def admin_weekly_hours(
                             ),
                             "duration": (
                                 format_duration(
-                                    total_seconds
+                                    seconds
                                 )
                             ),
                         }
                     )
 
                 return {
-                    "department": (
-                        department
-                    ),
+                    "department": department,
                     "timezone": (
                         SYSTEM_TIMEZONE
                     ),
                     "week_start": (
-                        start_local
-                        .isoformat()
+                        start_local.isoformat()
                     ),
                     "week_end": (
-                        end_local
-                        .isoformat()
+                        end_local.isoformat()
                     ),
-                    "employees": (
-                        employees
-                    ),
+                    "employees": employees,
                     "department_total": (
                         format_duration(
                             department_total
@@ -1438,17 +1283,15 @@ def admin_weekly_hours(
         raise HTTPException(
             status_code=500,
             detail=(
-                "Unable to calculate "
-                f"weekly hours: {exc}"
+                "Unable to calculate weekly hours: "
+                f"{exc}"
             ),
         )
 
 
 # ============================================================
-# ADMIN
-# EDIT SHIFT
+# ADMIN - EDIT SHIFT
 # ============================================================
-
 
 @app.patch(
     "/api/timekeeping/admin/shifts/{shift_id}"
@@ -1496,49 +1339,30 @@ def admin_edit_shift(
                 old_clock_out = shift[1]
                 old_activities = shift[2]
 
-                # --------------------------------------------
-                # Determine corrected values
-                # --------------------------------------------
-
-                if (
-                    request.clock_in
+                new_clock_in = (
+                    ensure_timezone(
+                        request.clock_in
+                    )
+                    if request.clock_in
                     is not None
-                ):
-                    new_clock_in = (
-                        ensure_timezone(
-                            request.clock_in
-                        )
-                    )
-                else:
-                    new_clock_in = (
-                        old_clock_in
-                    )
+                    else old_clock_in
+                )
 
-                if (
-                    request.clock_out
+                new_clock_out = (
+                    ensure_timezone(
+                        request.clock_out
+                    )
+                    if request.clock_out
                     is not None
-                ):
-                    new_clock_out = (
-                        ensure_timezone(
-                            request.clock_out
-                        )
-                    )
-                else:
-                    new_clock_out = (
-                        old_clock_out
-                    )
+                    else old_clock_out
+                )
 
-                if (
+                new_activities = (
                     request.activities
+                    if request.activities
                     is not None
-                ):
-                    new_activities = (
-                        request.activities
-                    )
-                else:
-                    new_activities = (
-                        old_activities
-                    )
+                    else old_activities
+                )
 
                 if (
                     new_clock_out
@@ -1569,10 +1393,6 @@ def admin_edit_shift(
                         str(shift_id),
                     ),
                 )
-
-                # --------------------------------------------
-                # Permanent audit record
-                # --------------------------------------------
 
                 cur.execute(
                     """
@@ -1639,10 +1459,8 @@ def admin_edit_shift(
 
 
 # ============================================================
-# ADMIN
-# ADD MISSED SHIFT
+# ADMIN - ADD MISSED SHIFT
 # ============================================================
-
 
 @app.post(
     "/api/timekeeping/admin/shifts"
@@ -1733,20 +1551,6 @@ def admin_add_shift(
                     cur.fetchone()[0]
                 )
 
-# ============================================================
-# ADMIN WEB CONSOLE
-# ============================================================
-
-@app.get("/admin", include_in_schema=False)
-def admin_console():
-    return FileResponse(
-        "static/admin.html"
-    )
-
-                # --------------------------------------------
-                # Audit record
-                # --------------------------------------------
-
                 cur.execute(
                     """
                     insert into public.timekeeping_shift_audit (
@@ -1780,7 +1584,7 @@ def admin_console():
 
                 conn.commit()
 
-                duration_seconds = int(
+                seconds = int(
                     (
                         clock_out
                         - clock_in
@@ -1792,12 +1596,10 @@ def admin_console():
                     "shift_id": str(
                         shift_id
                     ),
-                    "department": (
-                        department
-                    ),
+                    "department": department,
                     "duration": (
                         format_duration(
-                            duration_seconds
+                            seconds
                         )
                     ),
                     "message": (
@@ -1818,10 +1620,8 @@ def admin_console():
 
 
 # ============================================================
-# ADMIN
-# VOID SHIFT
+# ADMIN - VOID SHIFT
 # ============================================================
-
 
 @app.post(
     "/api/timekeeping/admin/shifts/{shift_id}/void"
@@ -1940,10 +1740,8 @@ def admin_void_shift(
 
 
 # ============================================================
-# ADMIN
-# SHIFT AUDIT HISTORY
+# ADMIN - AUDIT HISTORY
 # ============================================================
-
 
 @app.get(
     "/api/timekeeping/admin/shifts/{shift_id}/audit"
@@ -1964,8 +1762,7 @@ def admin_shift_audit(
 
                 cur.execute(
                     """
-                    select
-                        id
+                    select id
                     from public.timekeeping_shifts
                     where id = %s
                     limit 1
@@ -2015,39 +1812,43 @@ def admin_shift_audit(
                                 row[0]
                             ),
                             "action": row[1],
-                            "changed_by": (
-                                row[2]
-                            ),
+                            "changed_by": row[2],
                             "reason": row[3],
+
                             "previous_clock_in": (
                                 row[4].isoformat()
                                 if row[4]
                                 else None
                             ),
+
                             "previous_clock_out": (
                                 row[5].isoformat()
                                 if row[5]
                                 else None
                             ),
+
                             "new_clock_in": (
                                 row[6].isoformat()
                                 if row[6]
                                 else None
                             ),
+
                             "new_clock_out": (
                                 row[7].isoformat()
                                 if row[7]
                                 else None
                             ),
+
                             "previous_activities": (
                                 row[8]
                             ),
+
                             "new_activities": (
                                 row[9]
                             ),
+
                             "created_at": (
-                                row[10]
-                                .isoformat()
+                                row[10].isoformat()
                             ),
                         }
                     )
@@ -2059,9 +1860,7 @@ def admin_shift_audit(
                     "audit_count": len(
                         audit_entries
                     ),
-                    "audit": (
-                        audit_entries
-                    ),
+                    "audit": audit_entries,
                 }
 
     except HTTPException:
@@ -2075,3 +1874,20 @@ def admin_shift_audit(
                 f"{exc}"
             ),
         )
+
+
+# ============================================================
+# ADMIN WEB CONSOLE
+#
+# IMPORTANT:
+# This route intentionally comes AFTER all try/except blocks.
+# ============================================================
+
+@app.get(
+    "/admin",
+    include_in_schema=False,
+)
+def admin_console():
+    return FileResponse(
+        "static/admin.html"
+    )
