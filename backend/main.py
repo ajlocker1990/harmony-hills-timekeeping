@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 import psycopg
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse
 
 
 # ============================================================
@@ -1731,6 +1732,16 @@ def admin_add_shift(
                 shift_id = (
                     cur.fetchone()[0]
                 )
+
+# ============================================================
+# ADMIN WEB CONSOLE
+# ============================================================
+
+@app.get("/admin", include_in_schema=False)
+def admin_console():
+    return FileResponse(
+        "static/admin.html"
+    )
 
                 # --------------------------------------------
                 # Audit record
