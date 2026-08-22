@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Harmony Hills Timekeeping</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+            background: #111827;
+            color: #f3f4f6;
+        }
+
+        header {
+            background: #1f2937;
+            padding: 20px 30px;
+            border-bottom: 1px solid #374151;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 6px 0 0;
+            color: #9ca3af;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            padding: 25px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .card {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+        }
+
+        h3 {
+            margin-top: 0;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            background: #111827;
+            color: white;
+            border: 1px solid #4b5563;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 5px;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        button {
+            background: #2563eb;
+            border: none;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-right: 6px;
+            margin-bottom: 5px;
+        }
+
+        button:hover {
+            opacity: .9;
+        }
+
+        button.danger {
+            background: #b91c1c;
+        }
+
+        button.secondary {
+            background: #4b5563;
+        }
+
+        button.success {
+            background: #15803d;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #374151;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .status-open {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .status-closed {
+            color: #93c5fd;
+        }
+
+        .status-void {
+            color: #f87171;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .metric {
+            background: #111827;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .metric-label {
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        .error {
+            background: #7f1d1d;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .success-message {
+            background: #14532d;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: #1f2937;
+            border: 1px solid #4b5563;
+            border-radius: 10px;
+            padding: 25px;
+        }
+
+        .activities {
+            max-width: 350px;
+            white-space: pre-wrap;
+        }
+
+        code {
+            color: #93c5fd;
+        }
+
+        @media(max-width: 800px) {
+            table {
+                font-size: 12px;
+            }
+
+            th,
+            td {
+                padding: 6px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>Harmony Hills Timekeeping</h1>
+    <p>Fire Department Administration</p>
+</header>
+
+
+<div class="container">
+
+    <!-- ====================================================
+         LOGIN
+         ==================================================== -->
+
+    <div id="loginCard" class="card">
+        <h2>Administrator Login</h2>
+
+        <p>
+            Enter your administrator name and
+            Timekeeping Admin Key.
+        </p>
+
+        <label>Administrator Name</label>
+        <input
+            id="adminName"
+            placeholder="Example: AJ Lawson"
+        >
+
+        <label>Admin API Key</label>
+        <input
+            id="adminKey"
+            type="password"
+            placeholder="ADMIN_API_KEY"
+        >
+
+        <button onclick="login()">
+            Login
+        </button>
+    </div>
+
+
+    <!-- ====================================================
+         ADMIN APPLICATION
+         ==================================================== -->
+
+    <div id="app" class="hidden">
+
+        <div class="toolbar">
+            <button onclick="refreshAll()">
+                Refresh
+            </button>
+
+            <button
+                class="success"
+                onclick="openAddShift()"
+            >
+                Add Missed Shift
+            </button>
+
+            <button
+                class="secondary"
+                onclick="logout()"
+            >
+                Logout
+            </button>
+        </div>
+
+        <div id="messageArea"></div>
+
+
+        <!-- =================================================
+             SUMMARY
+             ================================================= -->
+
+        <div class="grid">
+
+            <div class="metric">
+                <div
+                    id="openCount"
+                    class="metric-value"
+                >
+                    0
+                </div>
+
+                <div class="metric-label">
+                    Currently Clocked In
+                </div>
+            </div>
+
+            <div class="metric">
+                <div
+                    id="weeklyTotal"
+                    class="metric-value"
+                >
+                    0h 0m
+                </div>
+
+                <div class="metric-label">
+                    Department Hours This Week
+                </div>
+            </div>
+
+            <div class="metric">
+                <div
+                    id="employeeCount"
+                    class="metric-value"
+                >
+                    0
+                </div>
+
+                <div class="metric-label">
+                    Employees With Hours This Week
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             ON DUTY
+             ================================================= -->
+
+        <div class="card">
+            <h2>Currently Clocked In</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Clock In</th>
+                        <th>Time On Duty</th>
+                    </tr>
+                </thead>
+
+                <tbody id="openShiftTable"></tbody>
+            </table>
+        </div>
+
+
+        <!-- =================================================
+             WEEKLY HOURS
+             ================================================= -->
+
+        <div class="card">
+            <h2>Current Week</h2>
+
+            <div id="weekRange"></div>
+
+            <br>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Total Hours</th>
+                    </tr>
+                </thead>
+
+                <tbody id="weeklyTable"></tbody>
+            </table>
+        </div>
+
+
+        <!-- =================================================
+             SHIFT HISTORY
+             ================================================= -->
+
+        <div class="card">
+            <h2>Recent Shift Records</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Clock In</th>
+                        <th>Clock Out</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Activities</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+
+                <tbody id="shiftTable"></tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ========================================================
+     EDIT SHIFT MODAL
+     ======================================================== -->
+
+<div id="editModal" class="modal hidden">
+
+    <div class="modal-content">
+
+        <h2>Edit Shift</h2>
+
+        <input
+            type="hidden"
+            id="editShiftId"
+        >
+
+        <label>Employee</label>
+        <input
+            id="editEmployee"
+            disabled
+        >
+
+        <label>Clock In</label>
+        <input
+            id="editClockIn"
+            type="datetime-local"
+        >
+
+        <label>Clock Out</label>
+        <input
+            id="editClockOut"
+            type="datetime-local"
+        >
+
+        <label>Activities</label>
+        <textarea id="editActivities"></textarea>
+
+        <label>Reason for Correction</label>
+        <textarea
+            id="editReason"
+            placeholder="Required. Explain why this record is being changed."
+        ></textarea>
+
+        <button onclick="saveEdit()">
+            Save Changes
+        </button>
+
+        <button
+            class="secondary"
+            onclick="closeEdit()"
+        >
+            Cancel
+        </button>
+
+    </div>
+</div>
+
+
+<!-- ========================================================
+     ADD SHIFT MODAL
+     ======================================================== -->
+
+<div id="addModal" class="modal hidden">
+
+    <div class="modal-content">
+
+        <h2>Add Missed Shift</h2>
+
+        <label>SL Avatar UUID</label>
+        <input
+            id="addAvatarUUID"
+            placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        >
+
+        <label>Avatar Name</label>
+        <input
+            id="addAvatarName"
+            placeholder="AJ Lawson"
+        >
+
+        <label>Clock In</label>
+        <input
+            id="addClockIn"
+            type="datetime-local"
+        >
+
+        <label>Clock Out</label>
+        <input
+            id="addClockOut"
+            type="datetime-local"
+        >
+
+        <label>Shift Activities</label>
+        <textarea id="addActivities"></textarea>
+
+        <label>Reason for Manual Entry</label>
+        <textarea
+            id="addReason"
+            placeholder="Example: Employee forgot to clock in."
+        ></textarea>
+
+        <button onclick="saveAddShift()">
+            Add Shift
+        </button>
+
+        <button
+            class="secondary"
+            onclick="closeAddShift()"
+        >
+            Cancel
+        </button>
+
+    </div>
+</div>
+
+
+<!-- ========================================================
+     AUDIT MODAL
+     ======================================================== -->
+
+<div id="auditModal" class="modal hidden">
+
+    <div class="modal-content">
+
+        <h2>Shift Audit History</h2>
+
+        <div id="auditContent"></div>
+
+        <br>
+
+        <button
+            class="secondary"
+            onclick="closeAudit()"
+        >
+            Close
+        </button>
+
+    </div>
+</div>
+
+
+<script>
+
+const DEPARTMENT = "HHFD";
+
+let adminKey = "";
+let adminName = "";
+let shifts = [];
+
+
+// ============================================================
+// AUTH
+// ============================================================
+
+async function login() {
+
+    adminName =
+        document.getElementById("adminName")
+        .value.trim();
+
+    adminKey =
+        document.getElementById("adminKey")
+        .value.trim();
+
+    if (!adminName || !adminKey) {
+        alert(
+            "Administrator name and API key are required."
+        );
+        return;
+    }
+
+    try {
+
+        const response =
+            await api(
+                "/api/timekeeping/admin/weekly-hours"
+                + "?department_code="
+                + DEPARTMENT
+            );
+
+        if (!response.ok) {
+
+            adminKey = "";
+
+            alert(
+                "Login failed. Check your Admin API Key."
+            );
+
+            return;
+        }
+
+        sessionStorage.setItem(
+            "hh_admin_name",
+            adminName
+        );
+
+        sessionStorage.setItem(
+            "hh_admin_key",
+            adminKey
+        );
+
+        document
+            .getElementById("loginCard")
+            .classList.add("hidden");
+
+        document
+            .getElementById("app")
+            .classList.remove("hidden");
+
+        await refreshAll();
+
+    }
+    catch (error) {
+
+        alert(
+            "Unable to connect to Timekeeping server."
+        );
+    }
+}
+
+
+function logout() {
+
+    sessionStorage.clear();
+
+    adminKey = "";
+    adminName = "";
+
+    location.reload();
+}
+
+
+// ============================================================
+// API
+// ============================================================
+
+function api(
+    path,
+    options = {}
+) {
+
+    options.headers = {
+        ...(options.headers || {}),
+        "X-Admin-Key": adminKey
+    };
+
+    if (options.body) {
+        options.headers["Content-Type"] =
+            "application/json";
+    }
+
+    return fetch(
+        path,
+        options
+    );
+}
+
+
+// ============================================================
+// REFRESH
+// ============================================================
+
+async function refreshAll() {
+
+    clearMessage();
+
+    await Promise.all([
+        loadOpenShifts(),
+        loadWeeklyHours(),
+        loadShifts()
+    ]);
+}
+
+
+// ============================================================
+// OPEN SHIFTS
+// ============================================================
+
+async function loadOpenShifts() {
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/open-shifts"
+            + "?department_code="
+            + DEPARTMENT
+        );
+
+    if (!response.ok) {
+        showError(
+            "Could not load current shifts."
+        );
+        return;
+    }
+
+    const data =
+        await response.json();
+
+    document
+        .getElementById("openCount")
+        .textContent =
+        data.count;
+
+    const tbody =
+        document.getElementById(
+            "openShiftTable"
+        );
+
+    tbody.innerHTML = "";
+
+    if (!data.open_shifts.length) {
+
+        tbody.innerHTML =
+            "<tr>"
+            + "<td colspan='3'>"
+            + "No personnel currently clocked in."
+            + "</td>"
+            + "</tr>";
+
+        return;
+    }
+
+    data.open_shifts.forEach(
+        shift => {
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${escapeHTML(
+                    shift.avatar_name
+                )}</td>
+
+                <td>${formatDate(
+                    shift.clock_in
+                )}</td>
+
+                <td>${escapeHTML(
+                    shift.duration.display
+                )}</td>
+            `;
+
+            tbody.appendChild(row);
+        }
+    );
+}
+
+
+// ============================================================
+// WEEKLY HOURS
+// ============================================================
+
+async function loadWeeklyHours() {
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/weekly-hours"
+            + "?department_code="
+            + DEPARTMENT
+        );
+
+    if (!response.ok) {
+
+        showError(
+            "Could not load weekly hours."
+        );
+
+        return;
+    }
+
+    const data =
+        await response.json();
+
+
+    document
+        .getElementById("weeklyTotal")
+        .textContent =
+        data.department_total.display;
+
+
+    document
+        .getElementById("employeeCount")
+        .textContent =
+        data.employees.length;
+
+
+    document
+        .getElementById("weekRange")
+        .textContent =
+        formatDate(data.week_start)
+        + " through "
+        + formatDate(data.week_end);
+
+
+    const tbody =
+        document.getElementById(
+            "weeklyTable"
+        );
+
+    tbody.innerHTML = "";
+
+
+    if (!data.employees.length) {
+
+        tbody.innerHTML =
+            "<tr>"
+            + "<td colspan='2'>"
+            + "No completed shifts this week."
+            + "</td>"
+            + "</tr>";
+
+        return;
+    }
+
+
+    data.employees.forEach(
+        employee => {
+
+            const row =
+                document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${escapeHTML(
+                    employee.avatar_name
+                )}</td>
+
+                <td>${escapeHTML(
+                    employee.duration.display
+                )}</td>
+            `;
+
+            tbody.appendChild(row);
+        }
+    );
+}
+
+
+// ============================================================
+// SHIFT HISTORY
+// ============================================================
+
+async function loadShifts() {
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/shifts"
+            + "?department_code="
+            + DEPARTMENT
+            + "&limit=100"
+        );
+
+    if (!response.ok) {
+
+        showError(
+            "Could not load shift history."
+        );
+
+        return;
+    }
+
+
+    const data =
+        await response.json();
+
+    shifts = data.shifts;
+
+
+    const tbody =
+        document.getElementById(
+            "shiftTable"
+        );
+
+    tbody.innerHTML = "";
+
+
+    if (!shifts.length) {
+
+        tbody.innerHTML =
+            "<tr>"
+            + "<td colspan='7'>"
+            + "No shifts found."
+            + "</td>"
+            + "</tr>";
+
+        return;
+    }
+
+
+    shifts.forEach(
+        shift => {
+
+            let statusClass =
+                "status-closed";
+
+            if (shift.status === "OPEN")
+                statusClass =
+                    "status-open";
+
+            if (shift.status === "VOID")
+                statusClass =
+                    "status-void";
+
+
+            const duration =
+                shift.duration
+                ? shift.duration.display
+                : "—";
+
+
+            const row =
+                document.createElement("tr");
+
+
+            row.innerHTML = `
+
+                <td>
+                    ${escapeHTML(
+                        shift.avatar_name
+                    )}
+                </td>
+
+                <td>
+                    ${formatDate(
+                        shift.clock_in
+                    )}
+                </td>
+
+                <td>
+                    ${
+                        shift.clock_out
+                        ? formatDate(
+                            shift.clock_out
+                        )
+                        : "OPEN"
+                    }
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        duration
+                    )}
+                </td>
+
+                <td
+                    class="${statusClass}"
+                >
+                    ${escapeHTML(
+                        shift.status
+                    )}
+                </td>
+
+                <td class="activities">
+                    ${escapeHTML(
+                        shift.activities || ""
+                    )}
+                </td>
+
+                <td>
+                    <button
+                        onclick="openEdit(
+                            '${shift.shift_id}'
+                        )"
+                    >
+                        Edit
+                    </button>
+
+                    <button
+                        class="secondary"
+                        onclick="viewAudit(
+                            '${shift.shift_id}'
+                        )"
+                    >
+                        Audit
+                    </button>
+
+                    ${
+                        shift.status !== "VOID"
+                        ?
+                        `
+                        <button
+                            class="danger"
+                            onclick="voidShift(
+                                '${shift.shift_id}'
+                            )"
+                        >
+                            Void
+                        </button>
+                        `
+                        :
+                        ""
+                    }
+                </td>
+            `;
+
+
+            tbody.appendChild(row);
+        }
+    );
+}
+
+
+// ============================================================
+// EDIT SHIFT
+// ============================================================
+
+function openEdit(
+    shiftId
+) {
+
+    const shift =
+        shifts.find(
+            item =>
+                item.shift_id === shiftId
+        );
+
+
+    if (!shift)
+        return;
+
+
+    document
+        .getElementById(
+            "editShiftId"
+        )
+        .value =
+        shift.shift_id;
+
+
+    document
+        .getElementById(
+            "editEmployee"
+        )
+        .value =
+        shift.avatar_name;
+
+
+    document
+        .getElementById(
+            "editClockIn"
+        )
+        .value =
+        toLocalInput(
+            shift.clock_in
+        );
+
+
+    document
+        .getElementById(
+            "editClockOut"
+        )
+        .value =
+        shift.clock_out
+        ? toLocalInput(
+            shift.clock_out
+        )
+        : "";
+
+
+    document
+        .getElementById(
+            "editActivities"
+        )
+        .value =
+        shift.activities || "";
+
+
+    document
+        .getElementById(
+            "editReason"
+        )
+        .value = "";
+
+
+    document
+        .getElementById(
+            "editModal"
+        )
+        .classList.remove(
+            "hidden"
+        );
+}
+
+
+function closeEdit() {
+
+    document
+        .getElementById(
+            "editModal"
+        )
+        .classList.add(
+            "hidden"
+        );
+}
+
+
+async function saveEdit() {
+
+    const shiftId =
+        document
+        .getElementById(
+            "editShiftId"
+        )
+        .value;
+
+
+    const reason =
+        document
+        .getElementById(
+            "editReason"
+        )
+        .value.trim();
+
+
+    if (!reason) {
+
+        alert(
+            "A reason for the correction is required."
+        );
+
+        return;
+    }
+
+
+    const payload = {
+
+        clock_in:
+            document
+            .getElementById(
+                "editClockIn"
+            )
+            .value,
+
+        clock_out:
+            document
+            .getElementById(
+                "editClockOut"
+            )
+            .value || null,
+
+        activities:
+            document
+            .getElementById(
+                "editActivities"
+            )
+            .value,
+
+        reason: reason,
+
+        changed_by:
+            adminName
+    };
+
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/shifts/"
+            + shiftId,
+
+            {
+                method: "PATCH",
+                body: JSON.stringify(
+                    payload
+                )
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(
+            JSON.stringify(
+                data.detail
+            )
+        );
+
+        return;
+    }
+
+
+    closeEdit();
+
+    showSuccess(
+        "Shift updated successfully."
+    );
+
+    await refreshAll();
+}
+
+
+// ============================================================
+// ADD SHIFT
+// ============================================================
+
+function openAddShift() {
+
+    document
+        .getElementById(
+            "addModal"
+        )
+        .classList.remove(
+            "hidden"
+        );
+}
+
+
+function closeAddShift() {
+
+    document
+        .getElementById(
+            "addModal"
+        )
+        .classList.add(
+            "hidden"
+        );
+}
+
+
+async function saveAddShift() {
+
+    const reason =
+        document
+        .getElementById(
+            "addReason"
+        )
+        .value.trim();
+
+
+    if (!reason) {
+
+        alert(
+            "A reason for the manual shift is required."
+        );
+
+        return;
+    }
+
+
+    const payload = {
+
+        avatar_uuid:
+            document
+            .getElementById(
+                "addAvatarUUID"
+            )
+            .value.trim(),
+
+        avatar_name:
+            document
+            .getElementById(
+                "addAvatarName"
+            )
+            .value.trim(),
+
+        department_code:
+            DEPARTMENT,
+
+        clock_in:
+            document
+            .getElementById(
+                "addClockIn"
+            )
+            .value,
+
+        clock_out:
+            document
+            .getElementById(
+                "addClockOut"
+            )
+            .value,
+
+        activities:
+            document
+            .getElementById(
+                "addActivities"
+            )
+            .value,
+
+        reason: reason,
+
+        changed_by:
+            adminName
+    };
+
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/shifts",
+
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    payload
+                )
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(
+            JSON.stringify(
+                data.detail
+            )
+        );
+
+        return;
+    }
+
+
+    closeAddShift();
+
+    showSuccess(
+        "Missed shift added successfully."
+    );
+
+    await refreshAll();
+}
+
+
+// ============================================================
+// VOID SHIFT
+// ============================================================
+
+async function voidShift(
+    shiftId
+) {
+
+    const reason =
+        prompt(
+            "Reason for voiding this shift:"
+        );
+
+
+    if (!reason)
+        return;
+
+
+    if (
+        !confirm(
+            "Are you sure you want to VOID this shift?"
+        )
+    )
+        return;
+
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/shifts/"
+            + shiftId
+            + "/void",
+
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    reason: reason,
+                    changed_by:
+                        adminName
+                })
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(
+            JSON.stringify(
+                data.detail
+            )
+        );
+
+        return;
+    }
+
+
+    showSuccess(
+        "Shift voided."
+    );
+
+    await refreshAll();
+}
+
+
+// ============================================================
+// AUDIT HISTORY
+// ============================================================
+
+async function viewAudit(
+    shiftId
+) {
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/shifts/"
+            + shiftId
+            + "/audit"
+        );
+
+
+    if (!response.ok) {
+
+        alert(
+            "Could not load audit history."
+        );
+
+        return;
+    }
+
+
+    const data =
+        await response.json();
+
+
+    const container =
+        document.getElementById(
+            "auditContent"
+        );
+
+
+    if (!data.audit.length) {
+
+        container.innerHTML =
+            "<p>"
+            + "No administrative changes "
+            + "have been made to this shift."
+            + "</p>";
+    }
+    else {
+
+        container.innerHTML =
+            data.audit.map(
+                entry => `
+                    <div class="card">
+
+                        <strong>
+                            ${escapeHTML(
+                                entry.action
+                            )}
+                        </strong>
+
+                        <p>
+                            <b>Changed By:</b>
+                            ${escapeHTML(
+                                entry.changed_by
+                            )}
+                        </p>
+
+                        <p>
+                            <b>Reason:</b>
+                            ${escapeHTML(
+                                entry.reason || ""
+                            )}
+                        </p>
+
+                        <p>
+                            <b>Date:</b>
+                            ${formatDate(
+                                entry.created_at
+                            )}
+                        </p>
+
+                    </div>
+                `
+            ).join("");
+    }
+
+
+    document
+        .getElementById(
+            "auditModal"
+        )
+        .classList.remove(
+            "hidden"
+        );
+}
+
+
+function closeAudit() {
+
+    document
+        .getElementById(
+            "auditModal"
+        )
+        .classList.add(
+            "hidden"
+        );
+}
+
+
+// ============================================================
+// DISPLAY HELPERS
+// ============================================================
+
+function formatDate(
+    value
+) {
+
+    if (!value)
+        return "—";
+
+    return new Date(
+        value
+    ).toLocaleString();
+}
+
+
+function toLocalInput(
+    value
+) {
+
+    const date =
+        new Date(value);
+
+    const offset =
+        date.getTimezoneOffset();
+
+    const local =
+        new Date(
+            date.getTime()
+            - offset * 60000
+        );
+
+    return local
+        .toISOString()
+        .slice(0,16);
+}
+
+
+function escapeHTML(
+    value
+) {
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.textContent =
+        value || "";
+
+    return div.innerHTML;
+}
+
+
+// ============================================================
+// MESSAGES
+// ============================================================
+
+function clearMessage() {
+
+    document
+        .getElementById(
+            "messageArea"
+        )
+        .innerHTML = "";
+}
+
+
+function showError(
+    message
+) {
+
+    document
+        .getElementById(
+            "messageArea"
+        )
+        .innerHTML =
+        `<div class="error">
+            ${escapeHTML(message)}
+        </div>`;
+}
+
+
+function showSuccess(
+    message
+) {
+
+    document
+        .getElementById(
+            "messageArea"
+        )
+        .innerHTML =
+        `<div class="success-message">
+            ${escapeHTML(message)}
+        </div>`;
+}
+
+
+// ============================================================
+// RESTORE SESSION
+// ============================================================
+
+window.addEventListener(
+    "load",
+    async () => {
+
+        const savedKey =
+            sessionStorage.getItem(
+                "hh_admin_key"
+            );
+
+        const savedName =
+            sessionStorage.getItem(
+                "hh_admin_name"
+            );
+
+
+        if (
+            savedKey
+            &&
+            savedName
+        ) {
+
+            adminKey =
+                savedKey;
+
+            adminName =
+                savedName;
+
+
+            document
+                .getElementById(
+                    "loginCard"
+                )
+                .classList.add(
+                    "hidden"
+                );
+
+
+            document
+                .getElementById(
+                    "app"
+                )
+                .classList.remove(
+                    "hidden"
+                );
+
+
+            await refreshAll();
+        }
+    }
+);
+
+</script>
+
+</body>
+</html>
