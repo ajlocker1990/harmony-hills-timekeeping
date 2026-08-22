@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1.0"
@@ -16,10 +18,7 @@
 
         body {
             margin: 0;
-            font-family:
-                Arial,
-                Helvetica,
-                sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             background: #111827;
             color: #f3f4f6;
         }
@@ -41,7 +40,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1500px;
             margin: auto;
             padding: 25px;
         }
@@ -58,10 +57,11 @@
             margin-bottom: 20px;
         }
 
-        h2 {
-            margin-top: 0;
+        .correction-card {
+            border-left: 4px solid #f59e0b;
         }
 
+        h2,
         h3 {
             margin-top: 0;
         }
@@ -116,6 +116,10 @@
             background: #15803d;
         }
 
+        button.warning {
+            background: #b45309;
+        }
+
         table {
             width: 100%;
             border-collapse: collapse;
@@ -148,15 +152,32 @@
             font-weight: bold;
         }
 
+        .status-pending {
+            color: #fbbf24;
+            font-weight: bold;
+        }
+
+        .status-approved {
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .status-denied {
+            color: #f87171;
+            font-weight: bold;
+        }
+
         .grid {
             display: grid;
             grid-template-columns:
-                repeat(auto-fit, minmax(250px, 1fr));
+                repeat(auto-fit, minmax(220px, 1fr));
             gap: 15px;
+            margin-bottom: 20px;
         }
 
         .metric {
-            background: #111827;
+            background: #1f2937;
+            border: 1px solid #374151;
             border-radius: 8px;
             padding: 16px;
         }
@@ -205,7 +226,7 @@
 
         .modal-content {
             width: 100%;
-            max-width: 700px;
+            max-width: 750px;
             max-height: 90vh;
             overflow-y: auto;
             background: #1f2937;
@@ -219,22 +240,76 @@
             white-space: pre-wrap;
         }
 
+        .request-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .request-field {
+            background: #111827;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .request-field strong {
+            display: block;
+            color: #9ca3af;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+
+        .muted {
+            color: #9ca3af;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .badge-warning {
+            background: #78350f;
+            color: #fde68a;
+        }
+
+        .badge-success {
+            background: #14532d;
+            color: #bbf7d0;
+        }
+
+        .badge-danger {
+            background: #7f1d1d;
+            color: #fecaca;
+        }
+
         code {
             color: #93c5fd;
         }
 
-        @media(max-width: 800px) {
+        @media(max-width: 900px) {
+            .table-wrap {
+                overflow-x: auto;
+            }
+
             table {
+                min-width: 850px;
                 font-size: 12px;
             }
 
             th,
             td {
-                padding: 6px;
+                padding: 7px;
             }
         }
     </style>
 </head>
+
 
 <body>
 
@@ -251,6 +326,7 @@
          ==================================================== -->
 
     <div id="loginCard" class="card">
+
         <h2>Administrator Login</h2>
 
         <p>
@@ -259,12 +335,14 @@
         </p>
 
         <label>Administrator Name</label>
+
         <input
             id="adminName"
             placeholder="Example: AJ Lawson"
         >
 
         <label>Admin API Key</label>
+
         <input
             id="adminKey"
             type="password"
@@ -274,6 +352,7 @@
         <button onclick="login()">
             Login
         </button>
+
     </div>
 
 
@@ -284,6 +363,7 @@
     <div id="app" class="hidden">
 
         <div class="toolbar">
+
             <button onclick="refreshAll()">
                 Refresh
             </button>
@@ -292,7 +372,7 @@
                 class="success"
                 onclick="openAddShift()"
             >
-                Add Missed Shift
+                Add Shift
             </button>
 
             <button
@@ -301,7 +381,9 @@
             >
                 Logout
             </button>
+
         </div>
+
 
         <div id="messageArea"></div>
 
@@ -313,6 +395,7 @@
         <div class="grid">
 
             <div class="metric">
+
                 <div
                     id="openCount"
                     class="metric-value"
@@ -323,9 +406,12 @@
                 <div class="metric-label">
                     Currently Clocked In
                 </div>
+
             </div>
 
+
             <div class="metric">
+
                 <div
                     id="weeklyTotal"
                     class="metric-value"
@@ -336,9 +422,12 @@
                 <div class="metric-label">
                     Department Hours This Week
                 </div>
+
             </div>
 
+
             <div class="metric">
+
                 <div
                     id="employeeCount"
                     class="metric-value"
@@ -347,31 +436,82 @@
                 </div>
 
                 <div class="metric-label">
-                    Employees With Hours This Week
+                    Employees With Hours
                 </div>
+
+            </div>
+
+
+            <div class="metric">
+
+                <div
+                    id="pendingCount"
+                    class="metric-value"
+                >
+                    0
+                </div>
+
+                <div class="metric-label">
+                    Pending Time Corrections
+                </div>
+
             </div>
 
         </div>
 
 
         <!-- =================================================
-             ON DUTY
+             PENDING CORRECTIONS
+             ================================================= -->
+
+        <div class="card correction-card">
+
+            <h2>
+                Pending Time Corrections
+            </h2>
+
+            <p class="muted">
+                Employee-submitted corrections do not change
+                payroll until approved by an administrator.
+            </p>
+
+            <div id="correctionContainer">
+
+                <p>
+                    Loading correction requests...
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- =================================================
+             CURRENTLY CLOCKED IN
              ================================================= -->
 
         <div class="card">
+
             <h2>Currently Clocked In</h2>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Clock In</th>
-                        <th>Time On Duty</th>
-                    </tr>
-                </thead>
+            <div class="table-wrap">
 
-                <tbody id="openShiftTable"></tbody>
-            </table>
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Clock In</th>
+                            <th>Time On Duty</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="openShiftTable"></tbody>
+
+                </table>
+
+            </div>
+
         </div>
 
 
@@ -380,22 +520,30 @@
              ================================================= -->
 
         <div class="card">
+
             <h2>Current Week</h2>
 
             <div id="weekRange"></div>
 
             <br>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Total Hours</th>
-                    </tr>
-                </thead>
+            <div class="table-wrap">
 
-                <tbody id="weeklyTable"></tbody>
-            </table>
+                <table>
+
+                    <thead>
+                        <tr>
+                            <th>Employee</th>
+                            <th>Total Hours</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="weeklyTable"></tbody>
+
+                </table>
+
+            </div>
+
         </div>
 
 
@@ -404,26 +552,93 @@
              ================================================= -->
 
         <div class="card">
+
             <h2>Recent Shift Records</h2>
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>Employee</th>
-                        <th>Clock In</th>
-                        <th>Clock Out</th>
-                        <th>Total</th>
-                        <th>Status</th>
-                        <th>Activities</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+            <div class="table-wrap">
 
-                <tbody id="shiftTable"></tbody>
-            </table>
+                <table>
+
+                    <thead>
+
+                        <tr>
+                            <th>Employee</th>
+                            <th>Clock In</th>
+                            <th>Clock Out</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Source</th>
+                            <th>Activities</th>
+                            <th>Actions</th>
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="shiftTable"></tbody>
+
+                </table>
+
+            </div>
+
         </div>
 
     </div>
+
+</div>
+
+
+<!-- ========================================================
+     REVIEW CORRECTION MODAL
+     ======================================================== -->
+
+<div
+    id="reviewModal"
+    class="modal hidden"
+>
+
+    <div class="modal-content">
+
+        <h2>Review Time Correction</h2>
+
+        <input
+            type="hidden"
+            id="reviewAdjustmentId"
+        >
+
+        <div id="reviewDetails"></div>
+
+        <label>
+            Administrator Review Notes
+        </label>
+
+        <textarea
+            id="reviewNotes"
+            placeholder="Optional notes explaining the approval or denial."
+        ></textarea>
+
+        <button
+            class="success"
+            onclick="approveAdjustment()"
+        >
+            Approve
+        </button>
+
+        <button
+            class="danger"
+            onclick="denyAdjustment()"
+        >
+            Deny
+        </button>
+
+        <button
+            class="secondary"
+            onclick="closeReview()"
+        >
+            Cancel
+        </button>
+
+    </div>
+
 </div>
 
 
@@ -431,7 +646,10 @@
      EDIT SHIFT MODAL
      ======================================================== -->
 
-<div id="editModal" class="modal hidden">
+<div
+    id="editModal"
+    class="modal hidden"
+>
 
     <div class="modal-content">
 
@@ -443,27 +661,34 @@
         >
 
         <label>Employee</label>
+
         <input
             id="editEmployee"
             disabled
         >
 
         <label>Clock In</label>
+
         <input
             id="editClockIn"
             type="datetime-local"
         >
 
         <label>Clock Out</label>
+
         <input
             id="editClockOut"
             type="datetime-local"
         >
 
         <label>Activities</label>
-        <textarea id="editActivities"></textarea>
+
+        <textarea
+            id="editActivities"
+        ></textarea>
 
         <label>Reason for Correction</label>
+
         <textarea
             id="editReason"
             placeholder="Required. Explain why this record is being changed."
@@ -481,6 +706,7 @@
         </button>
 
     </div>
+
 </div>
 
 
@@ -488,40 +714,51 @@
      ADD SHIFT MODAL
      ======================================================== -->
 
-<div id="addModal" class="modal hidden">
+<div
+    id="addModal"
+    class="modal hidden"
+>
 
     <div class="modal-content">
 
-        <h2>Add Missed Shift</h2>
+        <h2>Add Shift</h2>
 
         <label>SL Avatar UUID</label>
+
         <input
             id="addAvatarUUID"
             placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
         >
 
         <label>Avatar Name</label>
+
         <input
             id="addAvatarName"
-            placeholder="AJ Lawson"
+            placeholder="Avatar Name"
         >
 
         <label>Clock In</label>
+
         <input
             id="addClockIn"
             type="datetime-local"
         >
 
         <label>Clock Out</label>
+
         <input
             id="addClockOut"
             type="datetime-local"
         >
 
         <label>Shift Activities</label>
-        <textarea id="addActivities"></textarea>
+
+        <textarea
+            id="addActivities"
+        ></textarea>
 
         <label>Reason for Manual Entry</label>
+
         <textarea
             id="addReason"
             placeholder="Example: Employee forgot to clock in."
@@ -539,6 +776,7 @@
         </button>
 
     </div>
+
 </div>
 
 
@@ -546,7 +784,10 @@
      AUDIT MODAL
      ======================================================== -->
 
-<div id="auditModal" class="modal hidden">
+<div
+    id="auditModal"
+    class="modal hidden"
+>
 
     <div class="modal-content">
 
@@ -564,6 +805,7 @@
         </button>
 
     </div>
+
 </div>
 
 
@@ -573,29 +815,39 @@ const DEPARTMENT = "HHFD";
 
 let adminKey = "";
 let adminName = "";
+
 let shifts = [];
+let adjustments = [];
 
 
 // ============================================================
-// AUTH
+// LOGIN
 // ============================================================
 
 async function login() {
 
     adminName =
-        document.getElementById("adminName")
-        .value.trim();
+        document
+        .getElementById("adminName")
+        .value
+        .trim();
 
     adminKey =
-        document.getElementById("adminKey")
-        .value.trim();
+        document
+        .getElementById("adminKey")
+        .value
+        .trim();
+
 
     if (!adminName || !adminKey) {
+
         alert(
             "Administrator name and API key are required."
         );
+
         return;
     }
+
 
     try {
 
@@ -605,6 +857,7 @@ async function login() {
                 + "?department_code="
                 + DEPARTMENT
             );
+
 
         if (!response.ok) {
 
@@ -617,6 +870,7 @@ async function login() {
             return;
         }
 
+
         sessionStorage.setItem(
             "hh_admin_name",
             adminName
@@ -627,13 +881,26 @@ async function login() {
             adminKey
         );
 
-        document
-            .getElementById("loginCard")
-            .classList.add("hidden");
 
         document
-            .getElementById("app")
-            .classList.remove("hidden");
+        .getElementById(
+            "loginCard"
+        )
+        .classList
+        .add(
+            "hidden"
+        );
+
+
+        document
+        .getElementById(
+            "app"
+        )
+        .classList
+        .remove(
+            "hidden"
+        );
+
 
         await refreshAll();
 
@@ -672,10 +939,14 @@ function api(
         "X-Admin-Key": adminKey
     };
 
+
     if (options.body) {
-        options.headers["Content-Type"] =
-            "application/json";
+
+        options.headers[
+            "Content-Type"
+        ] = "application/json";
     }
+
 
     return fetch(
         path,
@@ -695,8 +966,697 @@ async function refreshAll() {
     await Promise.all([
         loadOpenShifts(),
         loadWeeklyHours(),
-        loadShifts()
+        loadShifts(),
+        loadAdjustments()
     ]);
+}
+
+
+// ============================================================
+// ADJUSTMENT REQUESTS
+// ============================================================
+
+async function loadAdjustments() {
+
+    const response =
+        await api(
+            "/api/timekeeping/admin/adjustments"
+            + "?department_code="
+            + DEPARTMENT
+            + "&status=PENDING"
+        );
+
+
+    if (!response.ok) {
+
+        showError(
+            "Could not load pending time corrections."
+        );
+
+        return;
+    }
+
+
+    const data =
+        await response.json();
+
+
+    adjustments =
+        data.adjustments || [];
+
+
+    document
+    .getElementById(
+        "pendingCount"
+    )
+    .textContent =
+        adjustments.length;
+
+
+    const container =
+        document
+        .getElementById(
+            "correctionContainer"
+        );
+
+
+    container.innerHTML = "";
+
+
+    if (!adjustments.length) {
+
+        container.innerHTML =
+            "<p>No pending time corrections.</p>";
+
+        return;
+    }
+
+
+    adjustments.forEach(
+        adjustment => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "card";
+
+
+            const requestedValue =
+                getRequestedTimeText(
+                    adjustment
+                );
+
+
+            const currentValue =
+                getCurrentTimeText(
+                    adjustment
+                );
+
+
+            card.innerHTML = `
+                <div class="toolbar">
+
+                    <span class="badge badge-warning">
+                        ${escapeHTML(
+                            formatRequestType(
+                                adjustment.request_type
+                            )
+                        )}
+                    </span>
+
+                    <span class="badge badge-warning">
+                        PENDING
+                    </span>
+
+                </div>
+
+                <h3>
+                    ${escapeHTML(
+                        adjustment.avatar_name
+                    )}
+                </h3>
+
+                <div class="request-grid">
+
+                    <div class="request-field">
+
+                        <strong>
+                            Request Type
+                        </strong>
+
+                        ${escapeHTML(
+                            formatRequestType(
+                                adjustment.request_type
+                            )
+                        )}
+
+                    </div>
+
+                    <div class="request-field">
+
+                        <strong>
+                            Current Record
+                        </strong>
+
+                        ${escapeHTML(
+                            currentValue
+                        )}
+
+                    </div>
+
+                    <div class="request-field">
+
+                        <strong>
+                            Requested Change
+                        </strong>
+
+                        ${escapeHTML(
+                            requestedValue
+                        )}
+
+                    </div>
+
+                    <div class="request-field">
+
+                        <strong>
+                            Submitted
+                        </strong>
+
+                        ${formatDate(
+                            adjustment.requested_at
+                        )}
+
+                    </div>
+
+                </div>
+
+                <p>
+                    <strong>Employee Reason:</strong>
+                    <br>
+                    ${escapeHTML(
+                        adjustment.reason
+                    )}
+                </p>
+
+                <button
+                    class="warning"
+                    onclick="openReview(
+                        '${adjustment.adjustment_id}'
+                    )"
+                >
+                    Review Request
+                </button>
+            `;
+
+
+            container.appendChild(
+                card
+            );
+        }
+    );
+}
+
+
+function formatRequestType(
+    value
+) {
+
+    if (value === "CLOCK_IN")
+        return "Clock-In Correction";
+
+    if (value === "CLOCK_OUT")
+        return "Clock-Out Correction";
+
+    if (value === "MISSED_SHIFT")
+        return "Missed Shift";
+
+    return value || "Unknown";
+}
+
+
+function getCurrentTimeText(
+    adjustment
+) {
+
+    if (
+        adjustment.request_type
+        === "CLOCK_IN"
+    ) {
+
+        return adjustment.current_clock_in
+            ? formatDate(
+                adjustment.current_clock_in
+            )
+            : "No current clock-in";
+    }
+
+
+    if (
+        adjustment.request_type
+        === "CLOCK_OUT"
+    ) {
+
+        return adjustment.current_clock_out
+            ? formatDate(
+                adjustment.current_clock_out
+            )
+            : "No current clock-out";
+    }
+
+
+    if (
+        adjustment.request_type
+        === "MISSED_SHIFT"
+    ) {
+
+        return "No existing shift";
+    }
+
+
+    return "—";
+}
+
+
+function getRequestedTimeText(
+    adjustment
+) {
+
+    if (
+        adjustment.request_type
+        === "CLOCK_IN"
+    ) {
+
+        return adjustment.requested_clock_in
+            ? formatDate(
+                adjustment.requested_clock_in
+            )
+            : "—";
+    }
+
+
+    if (
+        adjustment.request_type
+        === "CLOCK_OUT"
+    ) {
+
+        return adjustment.requested_clock_out
+            ? formatDate(
+                adjustment.requested_clock_out
+            )
+            : "—";
+    }
+
+
+    if (
+        adjustment.request_type
+        === "MISSED_SHIFT"
+    ) {
+
+        return (
+            formatDate(
+                adjustment.requested_clock_in
+            )
+            + " → "
+            + formatDate(
+                adjustment.requested_clock_out
+            )
+        );
+    }
+
+
+    return "—";
+}
+
+
+// ============================================================
+// REVIEW CORRECTION
+// ============================================================
+
+function openReview(
+    adjustmentId
+) {
+
+    const adjustment =
+        adjustments.find(
+            item =>
+                item.adjustment_id
+                === adjustmentId
+        );
+
+
+    if (!adjustment)
+        return;
+
+
+    document
+    .getElementById(
+        "reviewAdjustmentId"
+    )
+    .value =
+        adjustment.adjustment_id;
+
+
+    document
+    .getElementById(
+        "reviewNotes"
+    )
+    .value = "";
+
+
+    let shiftInfo = "";
+
+
+    if (
+        adjustment.request_type
+        !== "MISSED_SHIFT"
+    ) {
+
+        shiftInfo = `
+
+            <div class="request-field">
+
+                <strong>
+                    Existing Clock In
+                </strong>
+
+                ${
+                    adjustment.current_clock_in
+                    ? formatDate(
+                        adjustment.current_clock_in
+                    )
+                    : "—"
+                }
+
+            </div>
+
+            <div class="request-field">
+
+                <strong>
+                    Existing Clock Out
+                </strong>
+
+                ${
+                    adjustment.current_clock_out
+                    ? formatDate(
+                        adjustment.current_clock_out
+                    )
+                    : "OPEN / None"
+                }
+
+            </div>
+        `;
+    }
+
+
+    document
+    .getElementById(
+        "reviewDetails"
+    )
+    .innerHTML = `
+
+        <div class="request-grid">
+
+            <div class="request-field">
+
+                <strong>
+                    Employee
+                </strong>
+
+                ${escapeHTML(
+                    adjustment.avatar_name
+                )}
+
+            </div>
+
+            <div class="request-field">
+
+                <strong>
+                    Request
+                </strong>
+
+                ${escapeHTML(
+                    formatRequestType(
+                        adjustment.request_type
+                    )
+                )}
+
+            </div>
+
+            <div class="request-field">
+
+                <strong>
+                    Submitted
+                </strong>
+
+                ${formatDate(
+                    adjustment.requested_at
+                )}
+
+            </div>
+
+            ${shiftInfo}
+
+            <div class="request-field">
+
+                <strong>
+                    Requested Clock In
+                </strong>
+
+                ${
+                    adjustment.requested_clock_in
+                    ? formatDate(
+                        adjustment.requested_clock_in
+                    )
+                    : "—"
+                }
+
+            </div>
+
+            <div class="request-field">
+
+                <strong>
+                    Requested Clock Out
+                </strong>
+
+                ${
+                    adjustment.requested_clock_out
+                    ? formatDate(
+                        adjustment.requested_clock_out
+                    )
+                    : "—"
+                }
+
+            </div>
+
+        </div>
+
+        <div class="card">
+
+            <strong>
+                Employee Reason
+            </strong>
+
+            <p>
+                ${escapeHTML(
+                    adjustment.reason
+                )}
+            </p>
+
+        </div>
+    `;
+
+
+    document
+    .getElementById(
+        "reviewModal"
+    )
+    .classList
+    .remove(
+        "hidden"
+    );
+}
+
+
+function closeReview() {
+
+    document
+    .getElementById(
+        "reviewModal"
+    )
+    .classList
+    .add(
+        "hidden"
+    );
+}
+
+
+// ============================================================
+// APPROVE ADJUSTMENT
+// ============================================================
+
+async function approveAdjustment() {
+
+    const adjustmentId =
+        document
+        .getElementById(
+            "reviewAdjustmentId"
+        )
+        .value;
+
+
+    if (!adjustmentId)
+        return;
+
+
+    if (
+        !confirm(
+            "Approve this time correction?"
+        )
+    ) {
+        return;
+    }
+
+
+    const payload = {
+
+        reviewed_by:
+            adminName,
+
+        review_notes:
+            document
+            .getElementById(
+                "reviewNotes"
+            )
+            .value
+            .trim()
+            || null
+    };
+
+
+    const response =
+        await api(
+
+            "/api/timekeeping/admin/adjustments/"
+            + adjustmentId
+            + "/approve",
+
+            {
+                method: "POST",
+                body: JSON.stringify(
+                    payload
+                )
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(
+            getDetail(
+                data
+            )
+        );
+
+        return;
+    }
+
+
+    closeReview();
+
+
+    showSuccess(
+        "Time correction approved."
+    );
+
+
+    await refreshAll();
+}
+
+
+// ============================================================
+// DENY ADJUSTMENT
+// ============================================================
+
+async function denyAdjustment() {
+
+    const adjustmentId =
+        document
+        .getElementById(
+            "reviewAdjustmentId"
+        )
+        .value;
+
+
+    if (!adjustmentId)
+        return;
+
+
+    const notes =
+        document
+        .getElementById(
+            "reviewNotes"
+        )
+        .value
+        .trim();
+
+
+    if (!notes) {
+
+        alert(
+            "Enter review notes explaining why the request is being denied."
+        );
+
+        return;
+    }
+
+
+    if (
+        !confirm(
+            "Deny this time correction?"
+        )
+    ) {
+        return;
+    }
+
+
+    const payload = {
+
+        reviewed_by:
+            adminName,
+
+        review_notes:
+            notes
+    };
+
+
+    const response =
+        await api(
+
+            "/api/timekeeping/admin/adjustments/"
+            + adjustmentId
+            + "/deny",
+
+            {
+                method: "POST",
+
+                body: JSON.stringify(
+                    payload
+                )
+            }
+        );
+
+
+    if (!response.ok) {
+
+        const data =
+            await response.json();
+
+        alert(
+            getDetail(
+                data
+            )
+        );
+
+        return;
+    }
+
+
+    closeReview();
+
+
+    showSuccess(
+        "Time correction denied."
+    );
+
+
+    await refreshAll();
 }
 
 
@@ -713,27 +1673,38 @@ async function loadOpenShifts() {
             + DEPARTMENT
         );
 
+
     if (!response.ok) {
+
         showError(
             "Could not load current shifts."
         );
+
         return;
     }
+
 
     const data =
         await response.json();
 
+
     document
-        .getElementById("openCount")
-        .textContent =
+    .getElementById(
+        "openCount"
+    )
+    .textContent =
         data.count;
 
+
     const tbody =
-        document.getElementById(
+        document
+        .getElementById(
             "openShiftTable"
         );
 
+
     tbody.innerHTML = "";
+
 
     if (!data.open_shifts.length) {
 
@@ -747,27 +1718,41 @@ async function loadOpenShifts() {
         return;
     }
 
+
     data.open_shifts.forEach(
         shift => {
 
             const row =
-                document.createElement("tr");
+                document.createElement(
+                    "tr"
+                );
+
 
             row.innerHTML = `
-                <td>${escapeHTML(
-                    shift.avatar_name
-                )}</td>
 
-                <td>${formatDate(
-                    shift.clock_in
-                )}</td>
+                <td>
+                    ${escapeHTML(
+                        shift.avatar_name
+                    )}
+                </td>
 
-                <td>${escapeHTML(
-                    shift.duration.display
-                )}</td>
+                <td>
+                    ${formatDate(
+                        shift.clock_in
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        shift.duration.display
+                    )}
+                </td>
             `;
 
-            tbody.appendChild(row);
+
+            tbody.appendChild(
+                row
+            );
         }
     );
 }
@@ -786,6 +1771,7 @@ async function loadWeeklyHours() {
             + DEPARTMENT
         );
 
+
     if (!response.ok) {
 
         showError(
@@ -795,34 +1781,47 @@ async function loadWeeklyHours() {
         return;
     }
 
+
     const data =
         await response.json();
 
 
     document
-        .getElementById("weeklyTotal")
-        .textContent =
+    .getElementById(
+        "weeklyTotal"
+    )
+    .textContent =
         data.department_total.display;
 
 
     document
-        .getElementById("employeeCount")
-        .textContent =
+    .getElementById(
+        "employeeCount"
+    )
+    .textContent =
         data.employees.length;
 
 
     document
-        .getElementById("weekRange")
-        .textContent =
-        formatDate(data.week_start)
+    .getElementById(
+        "weekRange"
+    )
+    .textContent =
+        formatDate(
+            data.week_start
+        )
         + " through "
-        + formatDate(data.week_end);
+        + formatDate(
+            data.week_end
+        );
 
 
     const tbody =
-        document.getElementById(
+        document
+        .getElementById(
             "weeklyTable"
         );
+
 
     tbody.innerHTML = "";
 
@@ -844,19 +1843,30 @@ async function loadWeeklyHours() {
         employee => {
 
             const row =
-                document.createElement("tr");
+                document.createElement(
+                    "tr"
+                );
+
 
             row.innerHTML = `
-                <td>${escapeHTML(
-                    employee.avatar_name
-                )}</td>
 
-                <td>${escapeHTML(
-                    employee.duration.display
-                )}</td>
+                <td>
+                    ${escapeHTML(
+                        employee.avatar_name
+                    )}
+                </td>
+
+                <td>
+                    ${escapeHTML(
+                        employee.duration.display
+                    )}
+                </td>
             `;
 
-            tbody.appendChild(row);
+
+            tbody.appendChild(
+                row
+            );
         }
     );
 }
@@ -876,6 +1886,7 @@ async function loadShifts() {
             + "&limit=100"
         );
 
+
     if (!response.ok) {
 
         showError(
@@ -889,13 +1900,17 @@ async function loadShifts() {
     const data =
         await response.json();
 
-    shifts = data.shifts;
+
+    shifts =
+        data.shifts || [];
 
 
     const tbody =
-        document.getElementById(
+        document
+        .getElementById(
             "shiftTable"
         );
+
 
     tbody.innerHTML = "";
 
@@ -904,7 +1919,7 @@ async function loadShifts() {
 
         tbody.innerHTML =
             "<tr>"
-            + "<td colspan='7'>"
+            + "<td colspan='8'>"
             + "No shifts found."
             + "</td>"
             + "</tr>";
@@ -919,13 +1934,23 @@ async function loadShifts() {
             let statusClass =
                 "status-closed";
 
-            if (shift.status === "OPEN")
+
+            if (
+                shift.status
+                === "OPEN"
+            ) {
                 statusClass =
                     "status-open";
+            }
 
-            if (shift.status === "VOID")
+
+            if (
+                shift.status
+                === "VOID"
+            ) {
                 statusClass =
                     "status-void";
+            }
 
 
             const duration =
@@ -935,7 +1960,9 @@ async function loadShifts() {
 
 
             const row =
-                document.createElement("tr");
+                document.createElement(
+                    "tr"
+                );
 
 
             row.innerHTML = `
@@ -976,6 +2003,12 @@ async function loadShifts() {
                     )}
                 </td>
 
+                <td>
+                    ${escapeHTML(
+                        shift.source || ""
+                    )}
+                </td>
+
                 <td class="activities">
                     ${escapeHTML(
                         shift.activities || ""
@@ -983,6 +2016,7 @@ async function loadShifts() {
                 </td>
 
                 <td>
+
                     <button
                         onclick="openEdit(
                             '${shift.shift_id}'
@@ -1016,11 +2050,14 @@ async function loadShifts() {
                         :
                         ""
                     }
+
                 </td>
             `;
 
 
-            tbody.appendChild(row);
+            tbody.appendChild(
+                row
+            );
         }
     );
 }
@@ -1037,7 +2074,8 @@ function openEdit(
     const shift =
         shifts.find(
             item =>
-                item.shift_id === shiftId
+                item.shift_id
+                === shiftId
         );
 
 
@@ -1046,36 +2084,36 @@ function openEdit(
 
 
     document
-        .getElementById(
-            "editShiftId"
-        )
-        .value =
+    .getElementById(
+        "editShiftId"
+    )
+    .value =
         shift.shift_id;
 
 
     document
-        .getElementById(
-            "editEmployee"
-        )
-        .value =
+    .getElementById(
+        "editEmployee"
+    )
+    .value =
         shift.avatar_name;
 
 
     document
-        .getElementById(
-            "editClockIn"
-        )
-        .value =
+    .getElementById(
+        "editClockIn"
+    )
+    .value =
         toLocalInput(
             shift.clock_in
         );
 
 
     document
-        .getElementById(
-            "editClockOut"
-        )
-        .value =
+    .getElementById(
+        "editClockOut"
+    )
+    .value =
         shift.clock_out
         ? toLocalInput(
             shift.clock_out
@@ -1084,39 +2122,41 @@ function openEdit(
 
 
     document
-        .getElementById(
-            "editActivities"
-        )
-        .value =
+    .getElementById(
+        "editActivities"
+    )
+    .value =
         shift.activities || "";
 
 
     document
-        .getElementById(
-            "editReason"
-        )
-        .value = "";
+    .getElementById(
+        "editReason"
+    )
+    .value = "";
 
 
     document
-        .getElementById(
-            "editModal"
-        )
-        .classList.remove(
-            "hidden"
-        );
+    .getElementById(
+        "editModal"
+    )
+    .classList
+    .remove(
+        "hidden"
+    );
 }
 
 
 function closeEdit() {
 
     document
-        .getElementById(
-            "editModal"
-        )
-        .classList.add(
-            "hidden"
-        );
+    .getElementById(
+        "editModal"
+    )
+    .classList
+    .add(
+        "hidden"
+    );
 }
 
 
@@ -1135,7 +2175,8 @@ async function saveEdit() {
         .getElementById(
             "editReason"
         )
-        .value.trim();
+        .value
+        .trim();
 
 
     if (!reason) {
@@ -1162,7 +2203,8 @@ async function saveEdit() {
             .getElementById(
                 "editClockOut"
             )
-            .value || null,
+            .value
+            || null,
 
         activities:
             document
@@ -1171,7 +2213,8 @@ async function saveEdit() {
             )
             .value,
 
-        reason: reason,
+        reason:
+            reason,
 
         changed_by:
             adminName
@@ -1180,11 +2223,13 @@ async function saveEdit() {
 
     const response =
         await api(
+
             "/api/timekeeping/admin/shifts/"
             + shiftId,
 
             {
                 method: "PATCH",
+
                 body: JSON.stringify(
                     payload
                 )
@@ -1198,8 +2243,8 @@ async function saveEdit() {
             await response.json();
 
         alert(
-            JSON.stringify(
-                data.detail
+            getDetail(
+                data
             )
         );
 
@@ -1209,9 +2254,11 @@ async function saveEdit() {
 
     closeEdit();
 
+
     showSuccess(
         "Shift updated successfully."
     );
+
 
     await refreshAll();
 }
@@ -1224,24 +2271,26 @@ async function saveEdit() {
 function openAddShift() {
 
     document
-        .getElementById(
-            "addModal"
-        )
-        .classList.remove(
-            "hidden"
-        );
+    .getElementById(
+        "addModal"
+    )
+    .classList
+    .remove(
+        "hidden"
+    );
 }
 
 
 function closeAddShift() {
 
     document
-        .getElementById(
-            "addModal"
-        )
-        .classList.add(
-            "hidden"
-        );
+    .getElementById(
+        "addModal"
+    )
+    .classList
+    .add(
+        "hidden"
+    );
 }
 
 
@@ -1252,7 +2301,8 @@ async function saveAddShift() {
         .getElementById(
             "addReason"
         )
-        .value.trim();
+        .value
+        .trim();
 
 
     if (!reason) {
@@ -1272,14 +2322,16 @@ async function saveAddShift() {
             .getElementById(
                 "addAvatarUUID"
             )
-            .value.trim(),
+            .value
+            .trim(),
 
         avatar_name:
             document
             .getElementById(
                 "addAvatarName"
             )
-            .value.trim(),
+            .value
+            .trim(),
 
         department_code:
             DEPARTMENT,
@@ -1305,7 +2357,8 @@ async function saveAddShift() {
             )
             .value,
 
-        reason: reason,
+        reason:
+            reason,
 
         changed_by:
             adminName
@@ -1314,10 +2367,12 @@ async function saveAddShift() {
 
     const response =
         await api(
+
             "/api/timekeeping/admin/shifts",
 
             {
                 method: "POST",
+
                 body: JSON.stringify(
                     payload
                 )
@@ -1331,8 +2386,8 @@ async function saveAddShift() {
             await response.json();
 
         alert(
-            JSON.stringify(
-                data.detail
+            getDetail(
+                data
             )
         );
 
@@ -1342,9 +2397,11 @@ async function saveAddShift() {
 
     closeAddShift();
 
+
     showSuccess(
-        "Missed shift added successfully."
+        "Shift added successfully."
     );
+
 
     await refreshAll();
 }
@@ -1372,20 +2429,26 @@ async function voidShift(
         !confirm(
             "Are you sure you want to VOID this shift?"
         )
-    )
+    ) {
         return;
+    }
 
 
     const response =
         await api(
+
             "/api/timekeeping/admin/shifts/"
             + shiftId
             + "/void",
 
             {
                 method: "POST",
+
                 body: JSON.stringify({
-                    reason: reason,
+
+                    reason:
+                        reason,
+
                     changed_by:
                         adminName
                 })
@@ -1399,8 +2462,8 @@ async function voidShift(
             await response.json();
 
         alert(
-            JSON.stringify(
-                data.detail
+            getDetail(
+                data
             )
         );
 
@@ -1411,6 +2474,7 @@ async function voidShift(
     showSuccess(
         "Shift voided."
     );
+
 
     await refreshAll();
 }
@@ -1426,6 +2490,7 @@ async function viewAudit(
 
     const response =
         await api(
+
             "/api/timekeeping/admin/shifts/"
             + shiftId
             + "/audit"
@@ -1447,7 +2512,8 @@ async function viewAudit(
 
 
     const container =
-        document.getElementById(
+        document
+        .getElementById(
             "auditContent"
         );
 
@@ -1465,6 +2531,7 @@ async function viewAudit(
         container.innerHTML =
             data.audit.map(
                 entry => `
+
                     <div class="card">
 
                         <strong>
@@ -1474,51 +2541,133 @@ async function viewAudit(
                         </strong>
 
                         <p>
-                            <b>Changed By:</b>
+
+                            <b>
+                                Changed By:
+                            </b>
+
                             ${escapeHTML(
                                 entry.changed_by
                             )}
+
                         </p>
 
                         <p>
-                            <b>Reason:</b>
+
+                            <b>
+                                Reason:
+                            </b>
+
                             ${escapeHTML(
                                 entry.reason || ""
                             )}
+
                         </p>
 
                         <p>
-                            <b>Date:</b>
+
+                            <b>
+                                Previous Clock In:
+                            </b>
+
+                            ${
+                                entry.previous_clock_in
+                                ? formatDate(
+                                    entry.previous_clock_in
+                                )
+                                : "—"
+                            }
+
+                        </p>
+
+                        <p>
+
+                            <b>
+                                New Clock In:
+                            </b>
+
+                            ${
+                                entry.new_clock_in
+                                ? formatDate(
+                                    entry.new_clock_in
+                                )
+                                : "—"
+                            }
+
+                        </p>
+
+                        <p>
+
+                            <b>
+                                Previous Clock Out:
+                            </b>
+
+                            ${
+                                entry.previous_clock_out
+                                ? formatDate(
+                                    entry.previous_clock_out
+                                )
+                                : "—"
+                            }
+
+                        </p>
+
+                        <p>
+
+                            <b>
+                                New Clock Out:
+                            </b>
+
+                            ${
+                                entry.new_clock_out
+                                ? formatDate(
+                                    entry.new_clock_out
+                                )
+                                : "—"
+                            }
+
+                        </p>
+
+                        <p>
+
+                            <b>
+                                Audit Date:
+                            </b>
+
                             ${formatDate(
                                 entry.created_at
                             )}
+
                         </p>
 
                     </div>
                 `
-            ).join("");
+            )
+            .join("");
     }
 
 
     document
-        .getElementById(
-            "auditModal"
-        )
-        .classList.remove(
-            "hidden"
-        );
+    .getElementById(
+        "auditModal"
+    )
+    .classList
+    .remove(
+        "hidden"
+    );
 }
 
 
 function closeAudit() {
 
     document
-        .getElementById(
-            "auditModal"
-        )
-        .classList.add(
-            "hidden"
-        );
+    .getElementById(
+        "auditModal"
+    )
+    .classList
+    .add(
+        "hidden"
+    );
 }
 
 
@@ -1533,9 +2682,24 @@ function formatDate(
     if (!value)
         return "—";
 
-    return new Date(
-        value
-    ).toLocaleString();
+
+    const date =
+        new Date(
+            value
+        );
+
+
+    if (
+        Number.isNaN(
+            date.getTime()
+        )
+    ) {
+        return value;
+    }
+
+
+    return date
+        .toLocaleString();
 }
 
 
@@ -1543,11 +2707,19 @@ function toLocalInput(
     value
 ) {
 
+    if (!value)
+        return "";
+
+
     const date =
-        new Date(value);
+        new Date(
+            value
+        );
+
 
     const offset =
         date.getTimezoneOffset();
+
 
     const local =
         new Date(
@@ -1555,9 +2727,13 @@ function toLocalInput(
             - offset * 60000
         );
 
+
     return local
         .toISOString()
-        .slice(0,16);
+        .slice(
+            0,
+            16
+        );
 }
 
 
@@ -1566,28 +2742,63 @@ function escapeHTML(
 ) {
 
     const div =
-        document.createElement(
+        document
+        .createElement(
             "div"
         );
 
+
     div.textContent =
-        value || "";
+        value ?? "";
+
 
     return div.innerHTML;
 }
 
 
+function getDetail(
+    data
+) {
+
+    if (!data)
+        return "Unknown server error.";
+
+
+    if (
+        typeof data.detail
+        === "string"
+    ) {
+        return data.detail;
+    }
+
+
+    if (
+        data.detail
+        &&
+        typeof data.detail
+        === "object"
+    ) {
+        return JSON.stringify(
+            data.detail
+        );
+    }
+
+
+    return "Unknown server error.";
+}
+
+
 // ============================================================
-// MESSAGES
+// MESSAGE AREA
 // ============================================================
 
 function clearMessage() {
 
     document
-        .getElementById(
-            "messageArea"
-        )
-        .innerHTML = "";
+    .getElementById(
+        "messageArea"
+    )
+    .innerHTML = "";
 }
 
 
@@ -1596,13 +2807,17 @@ function showError(
 ) {
 
     document
-        .getElementById(
-            "messageArea"
-        )
-        .innerHTML =
-        `<div class="error">
-            ${escapeHTML(message)}
-        </div>`;
+    .getElementById(
+        "messageArea"
+    )
+    .innerHTML = `
+
+        <div class="error">
+            ${escapeHTML(
+                message
+            )}
+        </div>
+    `;
 }
 
 
@@ -1611,31 +2826,39 @@ function showSuccess(
 ) {
 
     document
-        .getElementById(
-            "messageArea"
-        )
-        .innerHTML =
-        `<div class="success-message">
-            ${escapeHTML(message)}
-        </div>`;
+    .getElementById(
+        "messageArea"
+    )
+    .innerHTML = `
+
+        <div class="success-message">
+            ${escapeHTML(
+                message
+            )}
+        </div>
+    `;
 }
 
 
 // ============================================================
-// RESTORE SESSION
+// RESTORE ADMIN SESSION
 // ============================================================
 
 window.addEventListener(
     "load",
+
     async () => {
 
         const savedKey =
-            sessionStorage.getItem(
+            sessionStorage
+            .getItem(
                 "hh_admin_key"
             );
 
+
         const savedName =
-            sessionStorage.getItem(
+            sessionStorage
+            .getItem(
                 "hh_admin_name"
             );
 
@@ -1654,21 +2877,23 @@ window.addEventListener(
 
 
             document
-                .getElementById(
-                    "loginCard"
-                )
-                .classList.add(
-                    "hidden"
-                );
+            .getElementById(
+                "loginCard"
+            )
+            .classList
+            .add(
+                "hidden"
+            );
 
 
             document
-                .getElementById(
-                    "app"
-                )
-                .classList.remove(
-                    "hidden"
-                );
+            .getElementById(
+                "app"
+            )
+            .classList
+            .remove(
+                "hidden"
+            );
 
 
             await refreshAll();
