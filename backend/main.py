@@ -40,13 +40,13 @@ if not ADMIN_API_KEY:
 
 
 # ============================================================
-# FASTAPI
+# FASTAPI APP
 # ============================================================
 
 app = FastAPI(
     title="Harmony Hills Timekeeping",
     description="Harmony Hills personnel timekeeping system.",
-    version="0.2.1",
+    version="0.3.0",
 )
 
 
@@ -188,13 +188,12 @@ def verify_admin_api_key(
 
 
 # ============================================================
-# HELPERS
+# TIME HELPERS
 # ============================================================
 
 def ensure_timezone(
     value: datetime,
 ) -> datetime:
-
     if value.tzinfo is not None:
         return value
 
@@ -216,7 +215,6 @@ def format_duration(
     )
 
     hours = seconds // 3600
-
     minutes = (
         seconds % 3600
     ) // 60
@@ -230,7 +228,7 @@ def format_duration(
 
 
 # ============================================================
-# DEPARTMENT HELPERS
+# DEPARTMENT LOOKUP
 # ============================================================
 
 def get_department_by_group(
@@ -413,7 +411,7 @@ def validate_or_register_clock(
 
 
 # ============================================================
-# EMPLOYEES
+# EMPLOYEE LOOKUP / CREATION
 # ============================================================
 
 def get_or_create_employee(
@@ -563,7 +561,7 @@ def health():
         return {
             "status": "ok",
             "service": "Harmony Hills Timekeeping",
-            "version": "0.2.1",
+            "version": "0.3.0",
         }
 
     except Exception as exc:
@@ -571,6 +569,136 @@ def health():
             status_code=500,
             detail=(
                 f"Database connection failed: {exc}"
+            ),
+        )
+
+
+# ============================================================
+# CLOCK STATUS
+# ============================================================
+
+@app.get(
+    "/api/timekeeping/status/{avatar_uuid}"
+)
+def clock_status(
+    avatar_uuid: UUID,
+    group_uuid: UUID,
+    x_api_key: Optional[str] = Header(
+        default=None
+    ),
+):
+    verify_clock_api_key(
+        x_api_key
+    )
+
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+
+                department = (
+                    get_department_by_group(
+                        cur,
+                        group_uuid,
+                    )
+                )
+
+                cur.execute(
+                    """
+                    select
+                        id,
+                        avatar_name
+                    from public.timekeeping_employees
+                    where avatar_uuid = %s
+                    limit 1
+                    """,
+                    (
+                        str(avatar_uuid),
+                    ),
+                )
+
+                employee = cur.fetchone()
+
+                if not employee:
+                    return {
+                        "success": True,
+                        "clocked_in": False,
+                        "department": {
+                            "code": department["code"],
+                            "name": department["name"],
+                        },
+                    }
+
+                employee_id = employee[0]
+
+                cur.execute(
+                    """
+                    select
+                        id,
+                        clock_in
+                    from public.timekeeping_shifts
+                    where employee_id = %s
+                    and department_id = %s
+                    and status = 'OPEN'
+                    order by clock_in desc
+                    limit 1
+                    """,
+                    (
+                        employee_id,
+                        department["id"],
+                    ),
+                )
+
+                shift = cur.fetchone()
+
+                if not shift:
+                    return {
+                        "success": True,
+                        "clocked_in": False,
+                        "department": {
+                            "code": department["code"],
+                            "name": department["name"],
+                        },
+                    }
+
+                now = datetime.now(
+                    timezone.utc
+                )
+
+                seconds = int(
+                    (
+                        now
+                        - shift[1]
+                    ).total_seconds()
+                )
+
+                return {
+                    "success": True,
+                    "clocked_in": True,
+                    "shift_id": str(
+                        shift[0]
+                    ),
+                    "clock_in": (
+                        shift[1].isoformat()
+                    ),
+                    "duration": (
+                        format_duration(
+                            seconds
+                        )
+                    ),
+                    "department": {
+                        "code": department["code"],
+                        "name": department["name"],
+                    },
+                }
+
+    except HTTPException:
+        raise
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                f"Unable to check clock status: {exc}"
             ),
         )
 
@@ -652,10 +780,8 @@ def clock_in(
                         ),
                     )
 
-                clock_in_time = (
-                    datetime.now(
-                        timezone.utc
-                    )
+                clock_in_time = datetime.now(
+                    timezone.utc
                 )
 
                 cur.execute(
@@ -683,9 +809,7 @@ def clock_in(
                     ),
                 )
 
-                shift_id = (
-                    cur.fetchone()[0]
-                )
+                shift_id = cur.fetchone()[0]
 
                 conn.commit()
 
@@ -805,10 +929,8 @@ def clock_out(
                 shift_id = shift[0]
                 clock_in_time = shift[1]
 
-                clock_out_time = (
-                    datetime.now(
-                        timezone.utc
-                    )
+                clock_out_time = datetime.now(
+                    timezone.utc
                 )
 
                 activities = (
@@ -957,10 +1079,7 @@ def admin_list_shifts(
                 for row in rows:
                     duration = None
 
-                    if (
-                        row[3]
-                        and row[4]
-                    ):
+                    if row[3] and row[4]:
                         seconds = int(
                             (
                                 row[4]
@@ -1207,7 +1326,7 @@ def admin_weekly_hours(
                                 )
                             ),
                             0
-                        )
+                        ) as total_seconds
                     from public.timekeeping_shifts s
                     join public.timekeeping_employees e
                         on e.id = s.employee_id
@@ -1218,7 +1337,7 @@ def admin_weekly_hours(
                     group by
                         e.avatar_uuid,
                         e.avatar_name
-                    order by 3 desc
+                    order by total_seconds desc
                     """,
                     (
                         department["id"],
@@ -1343,8 +1462,7 @@ def admin_edit_shift(
                     ensure_timezone(
                         request.clock_in
                     )
-                    if request.clock_in
-                    is not None
+                    if request.clock_in is not None
                     else old_clock_in
                 )
 
@@ -1352,22 +1470,19 @@ def admin_edit_shift(
                     ensure_timezone(
                         request.clock_out
                     )
-                    if request.clock_out
-                    is not None
+                    if request.clock_out is not None
                     else old_clock_out
                 )
 
                 new_activities = (
                     request.activities
-                    if request.activities
-                    is not None
+                    if request.activities is not None
                     else old_activities
                 )
 
                 if (
                     new_clock_out
-                    and new_clock_out
-                    < new_clock_in
+                    and new_clock_out < new_clock_in
                 ):
                     raise HTTPException(
                         status_code=400,
@@ -1878,9 +1993,6 @@ def admin_shift_audit(
 
 # ============================================================
 # ADMIN WEB CONSOLE
-#
-# IMPORTANT:
-# This route intentionally comes AFTER all try/except blocks.
 # ============================================================
 
 @app.get(
