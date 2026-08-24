@@ -257,7 +257,6 @@ async def register_commands():
             "Discord command registration skipped: "
             "missing app ID or bot token."
         )
-
         return
 
     url = (
@@ -266,23 +265,23 @@ async def register_commands():
         + "/commands"
     )
 
-payload = {
-    "name": "corrections",
-    "description": (
-        "View pending HHFD time correction requests"
-    ),
+    payload = {
+        "name": "corrections",
+        "description": (
+            "View pending HHFD time correction requests"
+        ),
 
-    # User-installed application
-    "integration_types": [
-        1
-    ],
+        # User-installed application
+        "integration_types": [
+            1
+        ],
 
-    # Allow command in bot DMs AND private channels
-    "contexts": [
-        1,
-        2
-    ],
-}
+        # Allow in bot DMs and private channels
+        "contexts": [
+            1,
+            2
+        ],
+    }
 
     headers = {
         "Authorization":
