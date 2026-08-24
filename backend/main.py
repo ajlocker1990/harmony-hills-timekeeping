@@ -10,6 +10,8 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
+from discord_admin import router as discord_admin_router
+from discord_admin import register_commands
 
 # ============================================================
 # HARMONY HILLS TIMEKEEPING
@@ -55,7 +57,9 @@ app = FastAPI(
     version="0.4.0",
 )
 
-
+app.include_router(
+    discord_admin_router
+)
 # ============================================================
 # REQUEST MODELS
 # ============================================================
