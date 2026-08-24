@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from discord_admin import router as discord_admin_router
 from discord_admin import register_commands
 
+
 # ============================================================
 # HARMONY HILLS TIMEKEEPING
 # ============================================================
@@ -27,7 +28,7 @@ HHFD_DISCORD_WEBHOOK = os.getenv(
 
 SYSTEM_TIMEZONE = os.getenv(
     "SYSTEM_TIMEZONE",
-    "America/New_York",
+    "America/Los_Angeles",
 )
 
 
@@ -54,24 +55,39 @@ if not ADMIN_API_KEY:
 app = FastAPI(
     title="Harmony Hills Timekeeping",
     description="Harmony Hills personnel timekeeping system.",
-    version="0.4.0",
+    version="0.4.1",
 )
+
+
+# ============================================================
+# DISCORD PRIVATE ADMIN ROUTER
+# ============================================================
 
 app.include_router(
     discord_admin_router
 )
+
+
+@app.on_event("startup")
+async def startup_discord():
+    await register_commands()
+
+
 # ============================================================
 # REQUEST MODELS
 # ============================================================
 
 class ClockInRequest(BaseModel):
     avatar_uuid: UUID
+
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
     )
+
     group_uuid: UUID
     clock_uuid: UUID
+
     clock_name: Optional[str] = Field(
         default=None,
         max_length=200,
@@ -80,16 +96,20 @@ class ClockInRequest(BaseModel):
 
 class ClockOutRequest(BaseModel):
     avatar_uuid: UUID
+
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
     )
+
     group_uuid: UUID
     clock_uuid: UUID
+
     clock_name: Optional[str] = Field(
         default=None,
         max_length=200,
     )
+
     activities: str = Field(
         min_length=1,
         max_length=1500,
@@ -98,6 +118,7 @@ class ClockOutRequest(BaseModel):
 
 class AdjustmentRequestCreate(BaseModel):
     avatar_uuid: UUID
+
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
@@ -105,6 +126,7 @@ class AdjustmentRequestCreate(BaseModel):
 
     group_uuid: UUID
     clock_uuid: UUID
+
     clock_name: Optional[str] = Field(
         default=None,
         max_length=200,
@@ -139,6 +161,7 @@ class AdminAdjustmentReviewRequest(BaseModel):
 class AdminShiftEditRequest(BaseModel):
     clock_in: Optional[datetime] = None
     clock_out: Optional[datetime] = None
+
     activities: Optional[str] = Field(
         default=None,
         max_length=1500,
@@ -157,6 +180,7 @@ class AdminShiftEditRequest(BaseModel):
 
 class AdminShiftAddRequest(BaseModel):
     avatar_uuid: UUID
+
     avatar_name: str = Field(
         min_length=1,
         max_length=200,
@@ -293,19 +317,13 @@ def discord_timestamp(
 
 
 # ============================================================
-# DISCORD
+# DISCORD WEBHOOK OUTPUT
 # ============================================================
 
 def send_department_discord(
     department_code: str,
     message: str,
 ):
-    """
-    Discord is notification/output only.
-    A Discord failure must never destroy or reject
-    an otherwise valid timekeeping transaction.
-    """
-
     webhook = None
 
     if department_code == "HHFD":
@@ -316,7 +334,9 @@ def send_department_discord(
 
     payload = {
         "username": "Harmony Hills Timekeeping",
+
         "content": message,
+
         "allowed_mentions": {
             "parse": []
         },
@@ -326,6 +346,7 @@ def send_department_discord(
         with httpx.Client(
             timeout=10.0
         ) as client:
+
             response = client.post(
                 webhook,
                 json=payload,
@@ -337,7 +358,7 @@ def send_department_discord(
 
     except Exception as exc:
         print(
-            "Discord notification failed:",
+            "Discord webhook notification failed:",
             exc,
         )
 
@@ -345,7 +366,7 @@ def send_department_discord(
 
 
 # ============================================================
-# DEPARTMENTS
+# DEPARTMENT LOOKUP
 # ============================================================
 
 def get_department_by_group(
@@ -728,12 +749,13 @@ def health():
                 cur.execute(
                     "select 1;"
                 )
+
                 cur.fetchone()
 
         return {
             "status": "ok",
             "service": "Harmony Hills Timekeeping",
-            "version": "0.4.0",
+            "version": "0.4.1",
         }
 
     except Exception as exc:
@@ -776,7 +798,9 @@ def clock_status(
 
                 cur.execute(
                     """
-                    select id, avatar_name
+                    select
+                        id,
+                        avatar_name
                     from public.timekeeping_employees
                     where avatar_uuid = %s
                     limit 1
@@ -792,6 +816,7 @@ def clock_status(
                     return {
                         "success": True,
                         "clocked_in": False,
+
                         "department": {
                             "code": department["code"],
                             "name": department["name"],
@@ -808,6 +833,7 @@ def clock_status(
                     return {
                         "success": True,
                         "clocked_in": False,
+
                         "department": {
                             "code": department["code"],
                             "name": department["name"],
@@ -816,7 +842,9 @@ def clock_status(
 
                 seconds = int(
                     (
-                        datetime.now(timezone.utc)
+                        datetime.now(
+                            timezone.utc
+                        )
                         - shift[1]
                     ).total_seconds()
                 )
@@ -824,17 +852,21 @@ def clock_status(
                 return {
                     "success": True,
                     "clocked_in": True,
+
                     "shift_id": str(
                         shift[0]
                     ),
+
                     "clock_in": (
                         shift[1].isoformat()
                     ),
+
                     "duration": (
                         format_duration(
                             seconds
                         )
                     ),
+
                     "department": {
                         "code": department["code"],
                         "name": department["name"],
@@ -874,9 +906,11 @@ def clock_in(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_group(
-                    cur,
-                    request.group_uuid,
+                department = (
+                    get_department_by_group(
+                        cur,
+                        request.group_uuid,
+                    )
                 )
 
                 validate_or_register_clock(
@@ -886,10 +920,12 @@ def clock_in(
                     department["id"],
                 )
 
-                employee_id = get_or_create_employee(
-                    cur,
-                    request.avatar_uuid,
-                    request.avatar_name,
+                employee_id = (
+                    get_or_create_employee(
+                        cur,
+                        request.avatar_uuid,
+                        request.avatar_name,
+                    )
                 )
 
                 ensure_membership(
@@ -941,7 +977,9 @@ def clock_in(
                     ),
                 )
 
-                shift_id = cur.fetchone()[0]
+                shift_id = (
+                    cur.fetchone()[0]
+                )
 
                 conn.commit()
 
@@ -959,13 +997,16 @@ def clock_in(
         return {
             "success": True,
             "action": "CLOCK_IN",
+
             "shift_id": str(
                 shift_id
             ),
+
             "department": {
                 "code": department["code"],
                 "name": department["name"],
             },
+
             "clock_in": (
                 clock_in_time.isoformat()
             ),
@@ -1004,9 +1045,11 @@ def clock_out(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_group(
-                    cur,
-                    request.group_uuid,
+                department = (
+                    get_department_by_group(
+                        cur,
+                        request.group_uuid,
+                    )
                 )
 
                 validate_or_register_clock(
@@ -1016,10 +1059,12 @@ def clock_out(
                     department["id"],
                 )
 
-                employee_id = get_or_create_employee(
-                    cur,
-                    request.avatar_uuid,
-                    request.avatar_name,
+                employee_id = (
+                    get_or_create_employee(
+                        cur,
+                        request.avatar_uuid,
+                        request.avatar_name,
+                    )
                 )
 
                 ensure_membership(
@@ -1109,20 +1154,26 @@ def clock_out(
         return {
             "success": True,
             "action": "CLOCK_OUT",
+
             "shift_id": str(
                 shift[0]
             ),
+
             "department": {
                 "code": department["code"],
                 "name": department["name"],
             },
+
             "clock_in": (
                 shift[1].isoformat()
             ),
+
             "clock_out": (
                 clock_out_time.isoformat()
             ),
+
             "duration": duration,
+
             "activities": activities,
         }
 
@@ -1139,7 +1190,7 @@ def clock_out(
 
 
 # ============================================================
-# EMPLOYEE - SUBMIT ADJUSTMENT REQUEST
+# EMPLOYEE - CREATE ADJUSTMENT REQUEST
 # ============================================================
 
 @app.post(
@@ -1168,16 +1219,20 @@ def create_adjustment_request(
     }:
         raise HTTPException(
             status_code=400,
-            detail="Invalid adjustment request type.",
+            detail=(
+                "Invalid adjustment request type."
+            ),
         )
 
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_group(
-                    cur,
-                    request.group_uuid,
+                department = (
+                    get_department_by_group(
+                        cur,
+                        request.group_uuid,
+                    )
                 )
 
                 validate_or_register_clock(
@@ -1187,10 +1242,12 @@ def create_adjustment_request(
                     department["id"],
                 )
 
-                employee_id = get_or_create_employee(
-                    cur,
-                    request.avatar_uuid,
-                    request.avatar_name,
+                employee_id = (
+                    get_or_create_employee(
+                        cur,
+                        request.avatar_uuid,
+                        request.avatar_name,
+                    )
                 )
 
                 ensure_membership(
@@ -1216,6 +1273,7 @@ def create_adjustment_request(
                 )
 
                 shift_id = None
+
                 existing_clock_in = None
                 existing_clock_out = None
 
@@ -1261,6 +1319,7 @@ def create_adjustment_request(
                         )
 
                     shift_id = shift[0]
+
                     existing_clock_in = shift[1]
                     existing_clock_out = shift[2]
 
@@ -1271,7 +1330,8 @@ def create_adjustment_request(
                         raise HTTPException(
                             status_code=400,
                             detail=(
-                                "A corrected clock-in time is required."
+                                "A corrected clock-in "
+                                "time is required."
                             ),
                         )
 
@@ -1282,7 +1342,8 @@ def create_adjustment_request(
                         raise HTTPException(
                             status_code=400,
                             detail=(
-                                "A corrected clock-out time is required."
+                                "A corrected clock-out "
+                                "time is required."
                             ),
                         )
 
@@ -1360,25 +1421,25 @@ def create_adjustment_request(
 
         if existing_clock_in:
             message += (
-                f"**Current Clock In:** "
+                "**Current Clock In:** "
                 f"<t:{discord_timestamp(existing_clock_in)}:F>\n"
             )
 
         if existing_clock_out:
             message += (
-                f"**Current Clock Out:** "
+                "**Current Clock Out:** "
                 f"<t:{discord_timestamp(existing_clock_out)}:F>\n"
             )
 
         if requested_clock_in:
             message += (
-                f"**Requested Clock In:** "
+                "**Requested Clock In:** "
                 f"<t:{discord_timestamp(requested_clock_in)}:F>\n"
             )
 
         if requested_clock_out:
             message += (
-                f"**Requested Clock Out:** "
+                "**Requested Clock Out:** "
                 f"<t:{discord_timestamp(requested_clock_out)}:F>\n"
             )
 
@@ -1394,11 +1455,15 @@ def create_adjustment_request(
 
         return {
             "success": True,
+
             "adjustment_id": str(
                 adjustment_id
             ),
+
             "status": "PENDING",
+
             "request_type": request_type,
+
             "message": (
                 "Your request has been submitted "
                 "for administrator review."
@@ -1419,7 +1484,7 @@ def create_adjustment_request(
 
 
 # ============================================================
-# ADMIN - LIST ADJUSTMENT REQUESTS
+# ADMIN - LIST ADJUSTMENTS
 # ============================================================
 
 @app.get(
@@ -1440,9 +1505,11 @@ def admin_adjustments(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_code(
-                    cur,
-                    department_code,
+                department = (
+                    get_department_by_code(
+                        cur,
+                        department_code,
+                    )
                 )
 
                 cur.execute(
@@ -1466,18 +1533,23 @@ def admin_adjustments(
                         s.activities,
                         s.status
                     from public.timekeeping_adjustment_requests a
+
                     join public.timekeeping_employees e
                         on e.id = a.employee_id
+
                     left join public.timekeeping_shifts s
                         on s.id = a.shift_id
+
                     where a.department_id = %s
                     and (
                         upper(%s) = 'ALL'
                         or a.status = upper(%s)
                     )
+
                     order by
                         case
-                            when a.status = 'PENDING' then 0
+                            when a.status = 'PENDING'
+                            then 0
                             else 1
                         end,
                         a.requested_at desc
@@ -1499,6 +1571,7 @@ def admin_adjustments(
                             "adjustment_id": str(
                                 row[0]
                             ),
+
                             "request_type": row[1],
 
                             "requested_clock_in": (
@@ -1514,6 +1587,7 @@ def admin_adjustments(
                             ),
 
                             "reason": row[4],
+
                             "status": row[5],
 
                             "requested_at": (
@@ -1527,6 +1601,7 @@ def admin_adjustments(
                             ),
 
                             "reviewed_by": row[8],
+
                             "review_notes": row[9],
 
                             "shift_id": (
@@ -1554,6 +1629,7 @@ def admin_adjustments(
                             ),
 
                             "activities": row[15],
+
                             "shift_status": row[16],
                         }
                     )
@@ -1614,10 +1690,13 @@ def approve_adjustment(
                         d.code,
                         d.name
                     from public.timekeeping_adjustment_requests a
+
                     join public.timekeeping_employees e
                         on e.id = a.employee_id
+
                     join public.timekeeping_departments d
                         on d.id = a.department_id
+
                     where a.id = %s
                     limit 1
                     """,
@@ -1631,7 +1710,9 @@ def approve_adjustment(
                 if not row:
                     raise HTTPException(
                         status_code=404,
-                        detail="Adjustment request not found.",
+                        detail=(
+                            "Adjustment request not found."
+                        ),
                     )
 
                 if row[7] != "PENDING":
@@ -1646,22 +1727,26 @@ def approve_adjustment(
                 employee_id = row[0]
                 department_id = row[1]
                 shift_id = row[2]
+
                 request_type = row[3]
+
                 requested_in = row[4]
                 requested_out = row[5]
+
                 reason = row[6]
+
                 avatar_name = row[8]
                 department_code = row[9]
                 department_name = row[10]
 
-                resulting_shift_id = shift_id
+                resulting_shift_id = (
+                    shift_id
+                )
 
-                # --------------------------------------------
-                # MISSED SHIFT
-                # --------------------------------------------
-
-                if request_type == "MISSED_SHIFT":
-
+                if (
+                    request_type
+                    == "MISSED_SHIFT"
+                ):
                     cur.execute(
                         """
                         insert into public.timekeeping_shifts (
@@ -1733,10 +1818,6 @@ def approve_adjustment(
                         ),
                     )
 
-                # --------------------------------------------
-                # CLOCK CORRECTION
-                # --------------------------------------------
-
                 else:
                     cur.execute(
                         """
@@ -1774,10 +1855,16 @@ def approve_adjustment(
                     new_out = old_out
                     new_status = old_status
 
-                    if request_type == "CLOCK_IN":
+                    if (
+                        request_type
+                        == "CLOCK_IN"
+                    ):
                         new_in = requested_in
 
-                    if request_type == "CLOCK_OUT":
+                    if (
+                        request_type
+                        == "CLOCK_OUT"
+                    ):
                         new_out = requested_out
 
                         if old_status == "OPEN":
@@ -1879,17 +1966,21 @@ def approve_adjustment(
                 "✅ **TIME CORRECTION APPROVED**\n"
                 f"**Member:** {avatar_name}\n"
                 f"**Department:** {department_name}\n"
-                f"**Type:** {request_type.replace('_', ' ')}\n"
-                f"**Approved By:** {request.reviewed_by}"
+                f"**Type:** "
+                f"{request_type.replace('_', ' ')}\n"
+                f"**Approved By:** "
+                f"{request.reviewed_by}"
             ),
         )
 
         return {
             "success": True,
             "status": "APPROVED",
+
             "adjustment_id": str(
                 adjustment_id
             ),
+
             "shift_id": str(
                 resulting_shift_id
             ),
@@ -1939,10 +2030,13 @@ def deny_adjustment(
                         d.code,
                         d.name
                     from public.timekeeping_adjustment_requests a
+
                     join public.timekeeping_employees e
                         on e.id = a.employee_id
+
                     join public.timekeeping_departments d
                         on d.id = a.department_id
+
                     where a.id = %s
                     limit 1
                     """,
@@ -1956,7 +2050,9 @@ def deny_adjustment(
                 if not row:
                     raise HTTPException(
                         status_code=404,
-                        detail="Adjustment request not found.",
+                        detail=(
+                            "Adjustment request not found."
+                        ),
                     )
 
                 if row[0] != "PENDING":
@@ -1993,14 +2089,17 @@ def deny_adjustment(
                 "❌ **TIME CORRECTION DENIED**\n"
                 f"**Member:** {row[2]}\n"
                 f"**Department:** {row[4]}\n"
-                f"**Type:** {row[1].replace('_', ' ')}\n"
-                f"**Reviewed By:** {request.reviewed_by}"
+                f"**Type:** "
+                f"{row[1].replace('_', ' ')}\n"
+                f"**Reviewed By:** "
+                f"{request.reviewed_by}"
             ),
         )
 
         return {
             "success": True,
             "status": "DENIED",
+
             "adjustment_id": str(
                 adjustment_id
             ),
@@ -2046,9 +2145,11 @@ def admin_list_shifts(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_code(
-                    cur,
-                    department_code,
+                department = (
+                    get_department_by_code(
+                        cur,
+                        department_code,
+                    )
                 )
 
                 cur.execute(
@@ -2063,10 +2164,14 @@ def admin_list_shifts(
                         s.status,
                         s.source
                     from public.timekeeping_shifts s
+
                     join public.timekeeping_employees e
                         on e.id = s.employee_id
+
                     where s.department_id = %s
+
                     order by s.clock_in desc
+
                     limit %s
                     """,
                     (
@@ -2082,22 +2187,36 @@ def admin_list_shifts(
                 for row in rows:
                     duration = None
 
-                    if row[3] and row[4]:
-                        duration = format_duration(
-                            int(
-                                (
-                                    row[4]
-                                    - row[3]
-                                ).total_seconds()
+                    if (
+                        row[3]
+                        and row[4]
+                    ):
+                        duration = (
+                            format_duration(
+                                int(
+                                    (
+                                        row[4]
+                                        - row[3]
+                                    ).total_seconds()
+                                )
                             )
                         )
 
                     shifts.append(
                         {
-                            "shift_id": str(row[0]),
-                            "avatar_uuid": str(row[1]),
+                            "shift_id": str(
+                                row[0]
+                            ),
+
+                            "avatar_uuid": str(
+                                row[1]
+                            ),
+
                             "avatar_name": row[2],
-                            "clock_in": row[3].isoformat(),
+
+                            "clock_in": (
+                                row[3].isoformat()
+                            ),
 
                             "clock_out": (
                                 row[4].isoformat()
@@ -2106,8 +2225,11 @@ def admin_list_shifts(
                             ),
 
                             "duration": duration,
+
                             "activities": row[5],
+
                             "status": row[6],
+
                             "source": row[7],
                         }
                     )
@@ -2151,9 +2273,11 @@ def admin_open_shifts(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_code(
-                    cur,
-                    department_code,
+                department = (
+                    get_department_by_code(
+                        cur,
+                        department_code,
+                    )
                 )
 
                 cur.execute(
@@ -2164,10 +2288,13 @@ def admin_open_shifts(
                         e.avatar_name,
                         s.clock_in
                     from public.timekeeping_shifts s
+
                     join public.timekeeping_employees e
                         on e.id = s.employee_id
+
                     where s.department_id = %s
                     and s.status = 'OPEN'
+
                     order by s.clock_in asc
                     """,
                     (
@@ -2193,10 +2320,20 @@ def admin_open_shifts(
 
                     open_shifts.append(
                         {
-                            "shift_id": str(row[0]),
-                            "avatar_uuid": str(row[1]),
+                            "shift_id": str(
+                                row[0]
+                            ),
+
+                            "avatar_uuid": str(
+                                row[1]
+                            ),
+
                             "avatar_name": row[2],
-                            "clock_in": row[3].isoformat(),
+
+                            "clock_in": (
+                                row[3].isoformat()
+                            ),
+
                             "duration": (
                                 format_duration(
                                     seconds
@@ -2207,7 +2344,9 @@ def admin_open_shifts(
 
                 return {
                     "department": department,
-                    "count": len(open_shifts),
+                    "count": len(
+                        open_shifts
+                    ),
                     "open_shifts": open_shifts,
                 }
 
@@ -2263,7 +2402,9 @@ def admin_weekly_hours(
 
         end_local = (
             start_local
-            + timedelta(days=7)
+            + timedelta(
+                days=7
+            )
         )
 
         start_utc = (
@@ -2281,9 +2422,11 @@ def admin_weekly_hours(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_code(
-                    cur,
-                    department_code,
+                department = (
+                    get_department_by_code(
+                        cur,
+                        department_code,
+                    )
                 )
 
                 cur.execute(
@@ -2302,16 +2445,21 @@ def admin_weekly_hours(
                             ),
                             0
                         ) as total_seconds
+
                     from public.timekeeping_shifts s
+
                     join public.timekeeping_employees e
                         on e.id = s.employee_id
+
                     where s.department_id = %s
                     and s.status = 'CLOSED'
                     and s.clock_in >= %s
                     and s.clock_in < %s
+
                     group by
                         e.avatar_uuid,
                         e.avatar_name
+
                     order by total_seconds desc
                     """,
                     (
@@ -2324,6 +2472,7 @@ def admin_weekly_hours(
                 rows = cur.fetchall()
 
                 employees = []
+
                 department_total = 0
 
                 for row in rows:
@@ -2335,8 +2484,12 @@ def admin_weekly_hours(
 
                     employees.append(
                         {
-                            "avatar_uuid": str(row[0]),
+                            "avatar_uuid": str(
+                                row[0]
+                            ),
+
                             "avatar_name": row[1],
+
                             "duration": (
                                 format_duration(
                                     seconds
@@ -2347,14 +2500,21 @@ def admin_weekly_hours(
 
                 return {
                     "department": department,
-                    "timezone": SYSTEM_TIMEZONE,
+
+                    "timezone": (
+                        SYSTEM_TIMEZONE
+                    ),
+
                     "week_start": (
                         start_local.isoformat()
                     ),
+
                     "week_end": (
                         end_local.isoformat()
                     ),
+
                     "employees": employees,
+
                     "department_total": (
                         format_duration(
                             department_total
@@ -2423,6 +2583,7 @@ def admin_edit_shift(
 
                 old_in = shift[0]
                 old_out = shift[1]
+
                 old_activities = shift[2]
                 old_status = shift[3]
 
@@ -2444,7 +2605,8 @@ def admin_edit_shift(
 
                 new_activities = (
                     request.activities
-                    if request.activities is not None
+                    if request.activities
+                    is not None
                     else old_activities
                 )
 
@@ -2530,7 +2692,10 @@ def admin_edit_shift(
 
         return {
             "success": True,
-            "shift_id": str(shift_id),
+
+            "shift_id": str(
+                shift_id
+            ),
         }
 
     except HTTPException:
@@ -2582,15 +2747,19 @@ def admin_add_shift(
         with get_connection() as conn:
             with conn.cursor() as cur:
 
-                department = get_department_by_code(
-                    cur,
-                    request.department_code,
+                department = (
+                    get_department_by_code(
+                        cur,
+                        request.department_code,
+                    )
                 )
 
-                employee_id = get_or_create_employee(
-                    cur,
-                    request.avatar_uuid,
-                    request.avatar_name,
+                employee_id = (
+                    get_or_create_employee(
+                        cur,
+                        request.avatar_uuid,
+                        request.avatar_name,
+                    )
                 )
 
                 ensure_membership(
@@ -2630,7 +2799,9 @@ def admin_add_shift(
                     ),
                 )
 
-                shift_id = cur.fetchone()[0]
+                shift_id = (
+                    cur.fetchone()[0]
+                )
 
                 cur.execute(
                     """
@@ -2667,7 +2838,10 @@ def admin_add_shift(
 
         return {
             "success": True,
-            "shift_id": str(shift_id),
+
+            "shift_id": str(
+                shift_id
+            ),
         }
 
     except HTTPException:
@@ -2731,7 +2905,9 @@ def admin_void_shift(
                 if shift[3] == "VOID":
                     raise HTTPException(
                         status_code=409,
-                        detail="Shift is already void.",
+                        detail=(
+                            "Shift is already void."
+                        ),
                     )
 
                 cur.execute(
@@ -2780,7 +2956,10 @@ def admin_void_shift(
 
         return {
             "success": True,
-            "shift_id": str(shift_id),
+
+            "shift_id": str(
+                shift_id
+            ),
         }
 
     except HTTPException:
@@ -2796,7 +2975,7 @@ def admin_void_shift(
 
 
 # ============================================================
-# ADMIN - AUDIT
+# ADMIN - AUDIT HISTORY
 # ============================================================
 
 @app.get(
@@ -2846,9 +3025,14 @@ def admin_shift_audit(
                 for row in rows:
                     audit.append(
                         {
-                            "audit_id": str(row[0]),
+                            "audit_id": str(
+                                row[0]
+                            ),
+
                             "action": row[1],
+
                             "changed_by": row[2],
+
                             "reason": row[3],
 
                             "previous_clock_in": (
@@ -2875,8 +3059,14 @@ def admin_shift_audit(
                                 else None
                             ),
 
-                            "previous_activities": row[8],
-                            "new_activities": row[9],
+                            "previous_activities": (
+                                row[8]
+                            ),
+
+                            "new_activities": (
+                                row[9]
+                            ),
+
                             "created_at": (
                                 row[10].isoformat()
                             ),
@@ -2884,8 +3074,14 @@ def admin_shift_audit(
                     )
 
                 return {
-                    "shift_id": str(shift_id),
-                    "audit_count": len(audit),
+                    "shift_id": str(
+                        shift_id
+                    ),
+
+                    "audit_count": len(
+                        audit
+                    ),
+
                     "audit": audit,
                 }
 
@@ -2900,7 +3096,7 @@ def admin_shift_audit(
 
 
 # ============================================================
-# ADMIN PAGE
+# ADMIN WEB PAGE
 # ============================================================
 
 @app.get(
