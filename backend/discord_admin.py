@@ -22,22 +22,10 @@ router = APIRouter()
 # ============================================================
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-DISCORD_APP_ID = os.getenv(
-    "DISCORD_APP_ID"
-)
-
-DISCORD_PUBLIC_KEY = os.getenv(
-    "DISCORD_PUBLIC_KEY"
-)
-
-DISCORD_BOT_TOKEN = os.getenv(
-    "DISCORD_BOT_TOKEN"
-)
-
-DISCORD_ADMIN_USER_ID = os.getenv(
-    "DISCORD_ADMIN_USER_ID"
-)
+DISCORD_APP_ID = os.getenv("DISCORD_APP_ID")
+DISCORD_PUBLIC_KEY = os.getenv("DISCORD_PUBLIC_KEY")
+DISCORD_BOT_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+DISCORD_ADMIN_USER_ID = os.getenv("DISCORD_ADMIN_USER_ID")
 
 
 # ============================================================
@@ -45,6 +33,11 @@ DISCORD_ADMIN_USER_ID = os.getenv(
 # ============================================================
 
 def get_connection():
+    if not DATABASE_URL:
+        raise RuntimeError(
+            "DATABASE_URL environment variable is not configured."
+        )
+
     return psycopg.connect(
         DATABASE_URL,
         autocommit=False,
@@ -60,11 +53,13 @@ def verify_discord_signature(
     signature: Optional[str],
     timestamp: Optional[str],
 ):
-    if (
-        not DISCORD_PUBLIC_KEY
-        or not signature
-        or not timestamp
-    ):
+    if not DISCORD_PUBLIC_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="Discord public key is not configured.",
+        )
+
+    if not signature or not timestamp:
         raise HTTPException(
             status_code=401,
             detail="Missing Discord signature.",
@@ -72,23 +67,15 @@ def verify_discord_signature(
 
     try:
         verify_key = VerifyKey(
-            bytes.fromhex(
-                DISCORD_PUBLIC_KEY
-            )
+            bytes.fromhex(DISCORD_PUBLIC_KEY)
         )
 
         verify_key.verify(
-            timestamp.encode()
-            + raw_body,
-            bytes.fromhex(
-                signature
-            ),
+            timestamp.encode() + raw_body,
+            bytes.fromhex(signature),
         )
 
-    except (
-        BadSignatureError,
-        ValueError,
-    ):
+    except (BadSignatureError, ValueError):
         raise HTTPException(
             status_code=401,
             detail="Invalid Discord signature.",
@@ -96,26 +83,20 @@ def verify_discord_signature(
 
 
 # ============================================================
-# TIME FORMAT
+# DISCORD TIMESTAMP FORMAT
 # ============================================================
 
-def format_dt(
-    value,
-):
+def format_dt(value):
     if not value:
         return "—"
 
     unix_time = int(
         value
-        .astimezone(
-            timezone.utc
-        )
+        .astimezone(timezone.utc)
         .timestamp()
     )
 
-    return (
-        f"<t:{unix_time}:f>"
-    )
+    return f"<t:{unix_time}:f>"
 
 
 # ============================================================
@@ -125,10 +106,9 @@ def format_dt(
 def load_pending_corrections():
     with get_connection() as conn:
         with conn.cursor() as cur:
-
             cur.execute(
                 """
-                select
+                SELECT
                     a.request_type,
                     a.requested_clock_in,
                     a.requested_clock_out,
@@ -137,23 +117,23 @@ def load_pending_corrections():
                     e.avatar_name,
                     s.clock_in,
                     s.clock_out
-                from public.timekeeping_adjustment_requests a
+                FROM public.timekeeping_adjustment_requests a
 
-                join public.timekeeping_employees e
-                    on e.id = a.employee_id
+                JOIN public.timekeeping_employees e
+                    ON e.id = a.employee_id
 
-                join public.timekeeping_departments d
-                    on d.id = a.department_id
+                JOIN public.timekeeping_departments d
+                    ON d.id = a.department_id
 
-                left join public.timekeeping_shifts s
-                    on s.id = a.shift_id
+                LEFT JOIN public.timekeeping_shifts s
+                    ON s.id = a.shift_id
 
-                where d.code = 'HHFD'
-                and a.status = 'PENDING'
+                WHERE d.code = 'HHFD'
+                  AND a.status = 'PENDING'
 
-                order by a.requested_at asc
+                ORDER BY a.requested_at ASC
 
-                limit 10
+                LIMIT 10
                 """
             )
 
@@ -161,12 +141,10 @@ def load_pending_corrections():
 
 
 # ============================================================
-# BUILD DISCORD RESPONSE
+# BUILD /CORRECTIONS RESPONSE
 # ============================================================
 
-def build_corrections_message(
-    rows,
-):
+def build_corrections_message(rows):
     if not rows:
         return (
             "✅ **HHFD Timekeeping**\n\n"
@@ -180,10 +158,7 @@ def build_corrections_message(
         "",
     ]
 
-    for index, row in enumerate(
-        rows,
-        start=1,
-    ):
+    for index, row in enumerate(rows, start=1):
         (
             request_type,
             requested_in,
@@ -197,10 +172,7 @@ def build_corrections_message(
 
         request_label = (
             request_type
-            .replace(
-                "_",
-                " "
-            )
+            .replace("_", " ")
             .title()
         )
 
@@ -215,57 +187,56 @@ def build_corrections_message(
         if request_type == "CLOCK_IN":
             lines.append(
                 "Current: "
-                + format_dt(
-                    current_in
-                )
+                + format_dt(current_in)
             )
 
             lines.append(
                 "Requested: "
-                + format_dt(
-                    requested_in
-                )
+                + format_dt(requested_in)
             )
 
         elif request_type == "CLOCK_OUT":
             lines.append(
                 "Current: "
-                + format_dt(
-                    current_out
-                )
+                + format_dt(current_out)
             )
 
             lines.append(
                 "Requested: "
-                + format_dt(
-                    requested_out
-                )
+                + format_dt(requested_out)
             )
 
         elif request_type == "MISSED_SHIFT":
             lines.append(
                 "Requested In: "
-                + format_dt(
-                    requested_in
-                )
+                + format_dt(requested_in)
             )
 
             lines.append(
                 "Requested Out: "
-                + format_dt(
-                    requested_out
-                )
+                + format_dt(requested_out)
             )
 
+        else:
+            if requested_in:
+                lines.append(
+                    "Requested In: "
+                    + format_dt(requested_in)
+                )
+
+            if requested_out:
+                lines.append(
+                    "Requested Out: "
+                    + format_dt(requested_out)
+                )
+
         lines.append(
-            f"Reason: {reason}"
+            f"Reason: {reason or 'No reason provided.'}"
         )
 
         lines.append(
             "Submitted: "
-            + format_dt(
-                requested_at
-            )
+            + format_dt(requested_at)
         )
 
         lines.append("")
@@ -275,9 +246,7 @@ def build_corrections_message(
         "Harmony Hills Timekeeping Admin Console."
     )
 
-    message = "\n".join(
-        lines
-    )
+    message = "\n".join(lines)
 
     if len(message) > 1900:
         message = (
@@ -290,7 +259,7 @@ def build_corrections_message(
 
 
 # ============================================================
-# REGISTER /CORRECTIONS COMMAND
+# REGISTER DISCORD COMMANDS
 # ============================================================
 
 async def register_commands():
@@ -306,39 +275,36 @@ async def register_commands():
         f"{DISCORD_APP_ID}/commands"
     )
 
-  payload = {
-    "name": "corrections",
-    "description": (
-        "View pending HHFD time correction requests"
-    ),
+    payload = {
+        "name": "corrections",
+        "description": "View pending HHFD time correction requests",
 
-    # Allow both user-installed and guild-installed use.
-    "integration_types": [
-        0,
-        1
-    ],
+        # 0 = Guild Install
+        # 1 = User Install
+        "integration_types": [
+            0,
+            1,
+        ],
 
-    # Guild channels, bot DMs, and private channels.
-    "contexts": [
-        0,
-        1,
-        2
-    ],
-}
+        # 0 = Guild
+        # 1 = Bot DM
+        # 2 = Private Channel
+        "contexts": [
+            0,
+            1,
+            2,
+        ],
+    }
 
     headers = {
-        "Authorization":
-            f"Bot {DISCORD_BOT_TOKEN}",
-
-        "Content-Type":
-            "application/json",
+        "Authorization": f"Bot {DISCORD_BOT_TOKEN}",
+        "Content-Type": "application/json",
     }
 
     try:
         async with httpx.AsyncClient(
             timeout=15.0
         ) as client:
-
             response = await client.post(
                 url,
                 headers=headers,
@@ -378,11 +344,9 @@ async def register_commands():
 )
 async def discord_interactions(
     request: Request,
-
     x_signature_ed25519: Optional[str] = Header(
         default=None
     ),
-
     x_signature_timestamp: Optional[str] = Header(
         default=None
     ),
@@ -396,9 +360,7 @@ async def discord_interactions(
     )
 
     try:
-        payload = json.loads(
-            raw_body
-        )
+        payload = json.loads(raw_body)
 
     except Exception:
         raise HTTPException(
@@ -406,9 +368,7 @@ async def discord_interactions(
             detail="Invalid Discord payload.",
         )
 
-    interaction_type = payload.get(
-        "type"
-    )
+    interaction_type = payload.get("type")
 
 
     # ========================================================
@@ -422,20 +382,22 @@ async def discord_interactions(
 
 
     # ========================================================
-    # ONLY APPLICATION COMMANDS
+    # ONLY HANDLE APPLICATION COMMANDS
     # ========================================================
 
     if interaction_type != 2:
         return {
             "type": 4,
             "data": {
-                "content":
-                    "Unsupported interaction.",
-
+                "content": "Unsupported interaction.",
                 "flags": 64,
             },
         }
 
+
+    # ========================================================
+    # COMMAND DATA
+    # ========================================================
 
     data = payload.get(
         "data",
@@ -474,18 +436,36 @@ async def discord_interactions(
     # ADMIN USER LOCK
     # ========================================================
 
-    if (
-        not DISCORD_ADMIN_USER_ID
-        or discord_user_id
-        != DISCORD_ADMIN_USER_ID
-    ):
+    if not DISCORD_ADMIN_USER_ID:
+        print(
+            "Discord admin access denied: "
+            "DISCORD_ADMIN_USER_ID is not configured."
+        )
+
         return {
             "type": 4,
             "data": {
-                "content":
-                    "⛔ You are not authorized "
-                    "to access HHFD timekeeping.",
+                "content": (
+                    "⛔ Discord administrator access "
+                    "is not configured."
+                ),
+                "flags": 64,
+            },
+        }
 
+    if discord_user_id != DISCORD_ADMIN_USER_ID:
+        print(
+            "Unauthorized Discord command attempt from user:",
+            discord_user_id,
+        )
+
+        return {
+            "type": 4,
+            "data": {
+                "content": (
+                    "⛔ You are not authorized to access "
+                    "HHFD timekeeping."
+                ),
                 "flags": 64,
             },
         }
@@ -496,16 +476,11 @@ async def discord_interactions(
     # ========================================================
 
     if command_name == "corrections":
-
         try:
-            rows = (
-                load_pending_corrections()
-            )
+            rows = load_pending_corrections()
 
-            message = (
-                build_corrections_message(
-                    rows
-                )
+            message = build_corrections_message(
+                rows
             )
 
         except Exception as exc:
@@ -522,9 +497,10 @@ async def discord_interactions(
         return {
             "type": 4,
             "data": {
-                "content":
-                    message,
+                "content": message,
 
+                # Ephemeral — only the user running
+                # the command can see the response.
                 "flags": 64,
             },
         }
@@ -537,9 +513,7 @@ async def discord_interactions(
     return {
         "type": 4,
         "data": {
-            "content":
-                "Unknown command.",
-
+            "content": "Unknown command.",
             "flags": 64,
         },
     }
