@@ -266,22 +266,23 @@ async def register_commands():
         + "/commands"
     )
 
-    payload = {
-        "name": "corrections",
-        "description": (
-            "View pending HHFD time correction requests"
-        ),
+payload = {
+    "name": "corrections",
+    "description": (
+        "View pending HHFD time correction requests"
+    ),
 
-        # USER_INSTALL only.
-        "integration_types": [
-            1
-        ],
+    # User-installed application
+    "integration_types": [
+        1
+    ],
 
-        # BOT_DM only.
-        "contexts": [
-            1
-        ],
-    }
+    # Allow command in bot DMs AND private channels
+    "contexts": [
+        1,
+        2
+    ],
+}
 
     headers = {
         "Authorization":
