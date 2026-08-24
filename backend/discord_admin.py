@@ -303,11 +303,21 @@ async def register_commands():
                 json=payload,
             )
 
-            response.raise_for_status()
+          print(
+    "Discord command registration status:",
+    response.status_code,
+)
 
-        print(
-            "Discord /corrections command registered."
-        )
+print(
+    "Discord command registration response:",
+    response.text,
+)
+
+response.raise_for_status()
+
+print(
+    "Discord /corrections command registered."
+)
 
     except Exception as exc:
         print(
