@@ -306,19 +306,25 @@ async def register_commands():
         f"{DISCORD_APP_ID}/commands"
     )
 
-    payload = {
-        "name": "corrections",
-        "description": (
-            "View pending HHFD time correction requests"
-        ),
-        "integration_types": [
-            1
-        ],
-        "contexts": [
-            1,
-            2
-        ],
-    }
+  payload = {
+    "name": "corrections",
+    "description": (
+        "View pending HHFD time correction requests"
+    ),
+
+    # Allow both user-installed and guild-installed use.
+    "integration_types": [
+        0,
+        1
+    ],
+
+    # Guild channels, bot DMs, and private channels.
+    "contexts": [
+        0,
+        1,
+        2
+    ],
+}
 
     headers = {
         "Authorization":
